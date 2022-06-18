@@ -13,5 +13,24 @@
             </PersistentString>
          </PersistentStrings>
       </ContextState>
+      <ContextState
+         contextName = "lanczos_interpolate_row:lanczos.c">
+         <PersistentStrings>
+            <PersistentString
+               value = "lanczos_kernel(x - i)">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "lanczos:lanczos.c">
+         <PersistentStrings>
+            <PersistentString
+               value = "red_in[1]">
+            </PersistentString>
+            <PersistentString
+               value = "red_out[0]">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
    </ContextStates>
 </VariablesViewState>
