@@ -16,7 +16,7 @@
 #define OUT_WIDTH  3840
 #define OUT_HEIGHT 2160
 
-#define SCALE (OUT_WIDTH/IN_WIDTH)
+#define SCALE ((double)OUT_WIDTH/IN_WIDTH)
 
 #define NUM_CHANNELS 3
 
