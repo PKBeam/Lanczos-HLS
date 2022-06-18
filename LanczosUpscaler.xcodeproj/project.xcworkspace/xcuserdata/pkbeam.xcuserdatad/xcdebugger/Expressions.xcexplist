@@ -6,13 +6,10 @@
          contextName = "main:main.c">
          <PersistentStrings>
             <PersistentString
-               value = "img[i+2]">
+               value = "green_in[1][0]">
             </PersistentString>
             <PersistentString
-               value = "img[i+1]">
-            </PersistentString>
-            <PersistentString
-               value = "img[i]">
+               value = "img_out[1920 * 3]">
             </PersistentString>
          </PersistentStrings>
       </ContextState>

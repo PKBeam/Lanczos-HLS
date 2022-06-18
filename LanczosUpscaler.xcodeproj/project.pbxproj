@@ -30,6 +30,7 @@
 		50D9B12D285D877A007B99B7 /* lanczos.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lanczos.h; sourceTree = "<group>"; };
 		50D9B12E285D877A007B99B7 /* lanczos.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lanczos.c; sourceTree = "<group>"; };
 		50D9B130285D93FA007B99B7 /* img */ = {isa = PBXFileReference; lastKnownFileType = folder; path = img; sourceTree = "<group>"; };
+		50D9B132285DD462007B99B7 /* stb_image_write.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = stb_image_write.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -62,13 +63,22 @@
 		50D9B122285D81E6007B99B7 /* LanczosUpscaler */ = {
 			isa = PBXGroup;
 			children = (
+				50D9B133285DD479007B99B7 /* stb_image */,
 				50D9B130285D93FA007B99B7 /* img */,
 				50D9B12D285D877A007B99B7 /* lanczos.h */,
 				50D9B12E285D877A007B99B7 /* lanczos.c */,
-				50D9B12A285D8276007B99B7 /* stb_image.h */,
 				50D9B123285D81E6007B99B7 /* main.c */,
 			);
 			path = LanczosUpscaler;
+			sourceTree = "<group>";
+		};
+		50D9B133285DD479007B99B7 /* stb_image */ = {
+			isa = PBXGroup;
+			children = (
+				50D9B12A285D8276007B99B7 /* stb_image.h */,
+				50D9B132285DD462007B99B7 /* stb_image_write.h */,
+			);
+			path = stb_image;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

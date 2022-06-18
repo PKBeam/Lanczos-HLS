@@ -15,5 +15,6 @@ void lanczos(
     byte_t blue_out[OUT_HEIGHT][OUT_WIDTH],
     byte_t grn_out[OUT_HEIGHT][OUT_WIDTH]
 ) {
+    // TODO: implement
     return;
 }
