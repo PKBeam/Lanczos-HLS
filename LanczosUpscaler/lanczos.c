@@ -11,7 +11,13 @@
 #define MAX(a, b) (a > b ? a : b)
 #define MIN(a, b) (a < b ? a : b)
 
-
+uint8_t double_to_uint8(double x) {
+    if (x > UINT8_MAX) {
+        return UINT8_MAX;
+    } else {
+        return (uint8_t) x;
+    }
+}
 
 double sinc(double x) {
     return sin(x)/x;
@@ -32,7 +38,8 @@ void lanczos_interpolate_row(byte_t in[IN_WIDTH], byte_t out[OUT_WIDTH]) {
         for (int i = MAX(0, floor(x) - LANCZOS_A + 1); i <= MIN(IN_WIDTH - 1, floor(x) + LANCZOS_A); i++) {
             sum += in[i] * lanczos_kernel(x - i);
         }
-        out[xx] = (int)sum;
+
+        out[xx] = double_to_uint8(sum);
     }
 }
 
@@ -48,7 +55,7 @@ void lanczos_interpolate_col(byte_t img[OUT_HEIGHT][OUT_WIDTH], int col) {
         for (int i = MAX(0, floor(x) - LANCZOS_A + 1); i <= MIN(IN_HEIGHT - 1, floor(x) + LANCZOS_A); i++) {
             sum += img[i][col] * lanczos_kernel(x - i);
         }
-        img[xx][col] = (int)sum;
+        img[xx][col] = double_to_uint8(sum);
     }
 }
 
