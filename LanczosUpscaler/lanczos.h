@@ -17,7 +17,8 @@
 #define OUT_HEIGHT 2160
 
 #define SCALE ((double)OUT_WIDTH/IN_WIDTH)
-
+#define SCALE_INT (OUT_WIDTH/IN_WIDTH)
+#define SCALE_IS_INT (OUT_WIDTH % IN_WIDTH == 0)
 #define NUM_CHANNELS 3
 
 #define LANCZOS_A 2
@@ -26,13 +27,13 @@ typedef uint8_t byte_t;
 
 // HLS target function
 void lanczos_HLS(
-    byte_t in[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
-    byte_t out[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
+    byte_t img_in[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
+    byte_t img_out[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
 );
 
 void lanczos(
-    byte_t in[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
-    byte_t out[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
+    byte_t img_in[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
+    byte_t img_out[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
 );
 
 #endif /* lanczos_h */
