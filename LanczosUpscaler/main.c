@@ -14,32 +14,26 @@
 #include "stb_image/stb_image_write.h"
 
 #define DEBUG 1
-#define NUM_CHANNELS 3
 
 typedef struct {
-    byte_t r;
-    byte_t g;
-    byte_t b;
+    byte_t channel[NUM_CHANNELS];
 } rgb_pixel_t;
 
-byte_t red_in[IN_HEIGHT][IN_WIDTH];
-byte_t blue_in[IN_HEIGHT][IN_WIDTH];
-byte_t green_in[IN_HEIGHT][IN_WIDTH];
+byte_t img_in[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH];
+byte_t img_out[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH];
 
-byte_t red_out[OUT_HEIGHT][OUT_WIDTH];
-byte_t blue_out[OUT_HEIGHT][OUT_WIDTH];
-byte_t green_out[OUT_HEIGHT][OUT_WIDTH];
-
-rgb_pixel_t img_out[OUT_HEIGHT * OUT_WIDTH];
+rgb_pixel_t img_interlaced_out[OUT_HEIGHT * OUT_WIDTH];
 
 #define OUT_DIR "/Users/pkbeam/Documents/Programming/LanczosUpscaler/LanczosUpscaler/img/"
+#define IN_IMG "IMG_0212.jpeg"
+#define OUT_IMG "out.png"
 
 int main(int argc, char* argv[]) {
     int width;
     int height;
     int channels;
 
-    rgb_pixel_t* img = (rgb_pixel_t*) stbi_load(OUT_DIR "IMG_0212.jpeg", &width, &height, &channels, NUM_CHANNELS);
+    rgb_pixel_t* img = (rgb_pixel_t*) stbi_load(OUT_DIR IN_IMG, &width, &height, &channels, NUM_CHANNELS);
 
     // error checking
     if (img == NULL) {
@@ -62,27 +56,27 @@ int main(int argc, char* argv[]) {
         int row = i / IN_WIDTH;
         int col = i % IN_WIDTH;
 
-        red_in[row][col] = img[i].r;
-        green_in[row][col] = img[i].g;
-        blue_in[row][col] = img[i].b;
+        for (int j = 0; j < NUM_CHANNELS; j++) {
+            img_in[j][row][col] = img[i].channel[j];
+        }
     }
 
     // apply lanczos
-    lanczos(red_in, blue_in, green_in, red_out, blue_out, green_out);
+    lanczos_HLS(img_in, img_out);
 
     // copy image data back
     for (int i = 0; i < OUT_WIDTH * OUT_HEIGHT; i++) {
         int row = i / OUT_WIDTH;
         int col = i % OUT_WIDTH;
 
-        img_out[i] = (rgb_pixel_t) {
-            red_out[row][col],
-            green_out[row][col],
-            blue_out[row][col],
-        };
+        rgb_pixel_t pixel = {};
+        for (int j = 0; j < NUM_CHANNELS; j++) {
+            pixel.channel[j] = img_out[j][row][col];
+        }
+        img_interlaced_out[i] = pixel;
     }
 
-    stbi_write_png(OUT_DIR "out.png", OUT_WIDTH, OUT_HEIGHT, NUM_CHANNELS, img_out, OUT_WIDTH * NUM_CHANNELS);
+    stbi_write_png(OUT_DIR OUT_IMG, OUT_WIDTH, OUT_HEIGHT, NUM_CHANNELS, img_interlaced_out, OUT_WIDTH * NUM_CHANNELS);
 
     return 0;
 }

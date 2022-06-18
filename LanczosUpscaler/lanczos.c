@@ -60,24 +60,65 @@ void lanczos_interpolate_col(byte_t img[OUT_HEIGHT][OUT_WIDTH], int col) {
 }
 
 void lanczos(
-    byte_t red_in[IN_HEIGHT][IN_WIDTH],
-    byte_t blue_in[IN_HEIGHT][IN_WIDTH],
-    byte_t green_in[IN_HEIGHT][IN_WIDTH],
-    byte_t red_out[OUT_HEIGHT][OUT_WIDTH],
-    byte_t blue_out[OUT_HEIGHT][OUT_WIDTH],
-    byte_t green_out[OUT_HEIGHT][OUT_WIDTH]
+    byte_t in[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
+    byte_t out[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
 ) {
     for (int i = 0; i < IN_HEIGHT; i++) {
-        lanczos_interpolate_row(red_in[i], red_out[i]);
-        lanczos_interpolate_row(blue_in[i], blue_out[i]);
-        lanczos_interpolate_row(green_in[i], green_out[i]);
+        for (int j = 0; j < NUM_CHANNELS; j++) {
+            lanczos_interpolate_row(in[j][i], out[j][i]);
+        }
     }
 
     for (int i = 0; i < OUT_WIDTH; i++) {
-        lanczos_interpolate_col(red_out, i);
-        lanczos_interpolate_col(blue_out, i);
-        lanczos_interpolate_col(green_out, i);
+        for (int j = 0; j < NUM_CHANNELS; j++) {
+            lanczos_interpolate_col(out[j], i);
+        }
     }
 
     return;
+}
+
+// HLS-synthesisable variant
+void lanczos_HLS(
+    byte_t in[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
+    byte_t out[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
+) {
+
+    for (int i = 0; i < IN_HEIGHT; i++) {
+        for (int j = 0; j < NUM_CHANNELS; j++) {
+            for (int xx = 0; xx < OUT_WIDTH; xx++) {
+                if (xx % SCALE == 0) {
+                    out[j][i][xx] = in[j][i][xx / SCALE];
+                    continue;
+                }
+                double x = (double) xx / SCALE;
+                double sum = 0;
+                for (int k = MAX(0, floor(x) - LANCZOS_A + 1); k <= MIN(IN_WIDTH - 1, floor(x) + LANCZOS_A); k++) {
+                    sum += in[j][i][k] * sin(M_PI * (x - k))/(M_PI * (x - k)) * sin(M_PI * (x - k) / LANCZOS_A) / (M_PI * (x - k) / LANCZOS_A);
+                }
+
+                out[j][i][xx] = sum > UINT8_MAX ? UINT8_MAX : (byte_t) sum;
+            }
+        }
+    }
+
+    for (int i = 0; i < OUT_WIDTH; i++) {
+        for (int j = 0; j < NUM_CHANNELS; j++) {
+            for (int xx = OUT_HEIGHT - 1; xx >= 0; xx--) {
+                if (xx % SCALE == 0) {
+                    out[j][xx][i] = out[j][xx / SCALE][i];
+                    continue;
+                }
+                double x = (double) xx / SCALE;
+                double sum = 0;
+                for (int k = MAX(0, floor(x) - LANCZOS_A + 1); k <= MIN(IN_HEIGHT - 1, floor(x) + LANCZOS_A); k++) {
+                    sum += out[j][k][i] * sin(M_PI * (x - k))/(M_PI * (x - k)) * sin(M_PI * (x - k) / LANCZOS_A) / (M_PI * (x - k) / LANCZOS_A);
+                }
+                out[j][xx][i] = sum > UINT8_MAX ? UINT8_MAX : (byte_t) sum;
+            }
+        }
+    }
+
+    return;
+
 }
