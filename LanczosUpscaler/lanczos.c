@@ -24,21 +24,16 @@ double sinc(double x) {
 }
 
 double lanczos_kernel(double x) {
-    return sinc(M_PI * x) * sinc(M_PI * x / LANCZOS_A);
+    return x == 0 ? 1 : sinc(M_PI * x) * sinc(M_PI * x / LANCZOS_A);
 }
 
 void lanczos_interpolate_row(byte_t in[IN_WIDTH], byte_t out[OUT_WIDTH]) {
     for (int xx = 0; xx < OUT_WIDTH; xx++) {
-        if (SCALE_IS_INT && xx % SCALE_INT == 0) {
-            out[xx] = in[xx / SCALE_INT];
-            continue;
-        }
         double x = (double) xx / SCALE;
         double sum = 0;
         for (int i = MAX(0, floor(x) - LANCZOS_A + 1); i <= MIN(IN_WIDTH - 1, floor(x) + LANCZOS_A); i++) {
             sum += in[i] * lanczos_kernel(x - i);
         }
-
         out[xx] = double_to_uint8(sum);
     }
 }
@@ -46,10 +41,6 @@ void lanczos_interpolate_row(byte_t in[IN_WIDTH], byte_t out[OUT_WIDTH]) {
 void lanczos_interpolate_col(byte_t img[OUT_HEIGHT][OUT_WIDTH], int col) {
     // start filling from largest height first so we don't overwrite any pixels we're using
     for (int xx = OUT_HEIGHT - 1; xx >= 0; xx--) {
-        if (SCALE_IS_INT && xx % SCALE_INT == 0) {
-            img[xx][col] = img[xx / SCALE_INT][col];
-            continue;
-        }
         double x = (double) xx / SCALE;
         double sum = 0;
         for (int i = MAX(0, floor(x) - LANCZOS_A + 1); i <= MIN(IN_HEIGHT - 1, floor(x) + LANCZOS_A); i++) {
@@ -74,8 +65,6 @@ void lanczos(
             lanczos_interpolate_col(img_out[j], i);
         }
     }
-
-    return;
 }
 
 // HLS-synthesisable variant
@@ -83,18 +72,13 @@ void lanczos_HLS(
     byte_t img_in[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
     byte_t img_out[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
 ) {
-
     for (int i = 0; i < IN_HEIGHT; i++) {
         for (int j = 0; j < NUM_CHANNELS; j++) {
             for (int xx = 0; xx < OUT_WIDTH; xx++) {
-                if (SCALE_IS_INT && xx % SCALE_INT == 0) {
-                    img_out[j][i][xx] = img_in[j][i][xx / (int)SCALE_INT];
-                    continue;
-                }
                 double x = (double) xx / SCALE;
                 double sum = 0;
                 for (int k = MAX(0, floor(x) - LANCZOS_A + 1); k <= MIN(IN_WIDTH - 1, floor(x) + LANCZOS_A); k++) {
-                    sum += img_in[j][i][k] * sin(M_PI * (x - k))/(M_PI * (x - k)) * sin(M_PI * (x - k) / LANCZOS_A) / (M_PI * (x - k) / LANCZOS_A);
+                    sum += img_in[j][i][k] * (x == k ? 1 : sin(M_PI * (x - k))/(M_PI * (x - k)) * sin(M_PI * (x - k) / LANCZOS_A) / (M_PI * (x - k) / LANCZOS_A));
                 }
 
                 img_out[j][i][xx] = sum > UINT8_MAX ? UINT8_MAX : (byte_t) sum;
@@ -105,20 +89,13 @@ void lanczos_HLS(
     for (int i = 0; i < OUT_WIDTH; i++) {
         for (int j = 0; j < NUM_CHANNELS; j++) {
             for (int xx = OUT_HEIGHT - 1; xx >= 0; xx--) {
-                if (SCALE_IS_INT && xx % SCALE_INT == 0) {
-                    img_out[j][xx][i] = img_out[j][xx / (int)SCALE_INT][i];
-                    continue;
-                }
                 double x = (double) xx / SCALE;
                 double sum = 0;
                 for (int k = MAX(0, floor(x) - LANCZOS_A + 1); k <= MIN(IN_HEIGHT - 1, floor(x) + LANCZOS_A); k++) {
-                    sum += img_out[j][k][i] * sin(M_PI * (x - k))/(M_PI * (x - k)) * sin(M_PI * (x - k) / LANCZOS_A) / (M_PI * (x - k) / LANCZOS_A);
+                    sum += img_out[j][k][i] * (x == k ? 1 : sin(M_PI * (x - k))/(M_PI * (x - k)) * sin(M_PI * (x - k) / LANCZOS_A) / (M_PI * (x - k) / LANCZOS_A));
                 }
                 img_out[j][xx][i] = sum > UINT8_MAX ? UINT8_MAX : (byte_t) sum;
             }
         }
     }
-
-    return;
-
 }

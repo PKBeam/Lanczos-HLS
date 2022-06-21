@@ -76,6 +76,7 @@ int main(int argc, char* argv[]) {
         img_interlaced_out[i] = pixel;
     }
 
+    // save data to image
     stbi_write_png(OUT_DIR OUT_IMG, OUT_WIDTH, OUT_HEIGHT, NUM_CHANNELS, img_interlaced_out, OUT_WIDTH * NUM_CHANNELS);
 
     return 0;
