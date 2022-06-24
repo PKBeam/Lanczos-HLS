@@ -1,3 +1,11 @@
 DerivedData/
 LanczosUpscaler/img/out.png
+LanczosUpscaler/img/expected.png
+LanczosUpscaler/img/observed.png
+LanczosUpscaler/params.h
+vivado_hls.log
+
+# Project folder
+Lanczos/
+
 */xcuserdata/
