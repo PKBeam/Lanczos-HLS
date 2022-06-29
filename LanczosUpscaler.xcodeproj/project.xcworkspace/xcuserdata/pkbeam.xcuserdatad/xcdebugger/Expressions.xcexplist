@@ -17,7 +17,13 @@
          contextName = "lanczos_interpolate_row:lanczos.c">
          <PersistentStrings>
             <PersistentString
-               value = "lanczos_kernel(x - i)">
+               value = "in[y + 1]">
+            </PersistentString>
+            <PersistentString
+               value = "sum">
+            </PersistentString>
+            <PersistentString
+               value = "in[y - 1]">
             </PersistentString>
          </PersistentStrings>
       </ContextState>

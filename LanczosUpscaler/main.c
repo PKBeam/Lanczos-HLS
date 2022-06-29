@@ -25,7 +25,7 @@ byte_t img_out[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH];
 rgb_pixel_t img_interlaced_out[OUT_HEIGHT * OUT_WIDTH];
 
 #define OUT_DIR "/Users/pkbeam/Documents/Programming/LanczosUpscaler/LanczosUpscaler/img/"
-#define IN_IMG "IMG_0212.jpeg"
+#define IN_IMG "IMG_DAI_1080.jpg"
 #define OUT_IMG "out.png"
 
 int main(int argc, char* argv[]) {
@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
     }
 
     // apply lanczos
-    lanczos_HLS(img_in, img_out);
+    lanczos(img_in, img_out);
 
     // copy image data back
     for (int i = 0; i < OUT_WIDTH * OUT_HEIGHT; i++) {

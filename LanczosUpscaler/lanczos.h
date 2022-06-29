@@ -25,12 +25,6 @@
 
 typedef uint8_t byte_t;
 
-// HLS target function
-void lanczos_HLS(
-    byte_t img_in[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
-    byte_t img_out[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
-);
-
 void lanczos(
     byte_t img_in[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
     byte_t img_out[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
