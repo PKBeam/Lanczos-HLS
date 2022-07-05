@@ -55,9 +55,7 @@ num_t is allowed to overflow, since the range can be mapped onto a 9 bit signed 
 typedef ap_fixed<BIT_PRECISION+2,2> kernel_t;
 typedef ap_fixed<BIT_PRECISION+9,9> num_t;
 
-// Awful hack to get GCD calculated at compile time. Guess we are programming in C.
-// https://stackoverflow.com/a/78794
-
+// GCD is defined in stb.cpp 
 int gcd(int, int);
 
 static const int SCALE_GCD = gcd(OUT_WIDTH, IN_WIDTH);
@@ -71,6 +69,7 @@ static const int SCALE_GCD = gcd(OUT_WIDTH, IN_WIDTH);
 void lanczos(
     byte_t img_in[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
     byte_t img_out[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
+
 );
 
 #endif /* lanczos_h */
