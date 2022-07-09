@@ -8,19 +8,18 @@
 #include "lanczos.h"
 #include "hls_math.h"
 
-typedef ap_fixed<BIT_PRECISION+3,3> kernel_in_t;
+typedef ap_fixed<BIT_PRECISION+10, 10> kernel_in_t;
 
 #define FORALL(a,n) for (a = 0; a < n; a++)
 #define GET(siz, arr, idx) (idx < 0 || idx >= siz) ? img_input[j][i][idx];
 #define PI ((kernel_in_t)M_PI)
 
 kernel_t lanczos_kernel(kernel_in_t x){
-//	if (x==0){
-//		return (kernel_t) 1.0;
-//	} else {
-//		return (kernel_t) (LANCZOS_A*hls::sinpi(x)*hls::sinpi(x / LANCZOS_A) / (PI*PI*x*x));
-//	}
-	return 0.5;
+	if (x==0){
+		return (kernel_t) 1.0;
+	}
+		//		return (kernel_t) (LANCZOS_A*hls::sinpi(x)*hls::sinpi(x / LANCZOS_A) / (PI*PI*x*x));
+	return (kernel_t) ((1-x*x)*(1-x*x/(LANCZOS_A*LANCZOS_A))*(1-x*x/(LANCZOS_A*LANCZOS_A)));
 }
 
 byte_t clamp_to_byte(num_t x){
@@ -29,7 +28,6 @@ byte_t clamp_to_byte(num_t x){
 	} else {
 		return x;
 	}
-
 }
 template <class T, int siz>
 T shift_left(T arr[siz], T next){
@@ -55,6 +53,7 @@ void lanczos(
     byte_t img_input[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
     byte_t img_output[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
 ) {
+#pragma HLS INTERFACE m_axi depth=10 port=img_input
 	num_t img_processed_rows[NUM_CHANNELS][IN_HEIGHT][OUT_WIDTH];
 	byte_t img_input_2[IN_WIDTH];
     for (int j = 0; j < NUM_CHANNELS; j++) {
@@ -69,7 +68,7 @@ void lanczos(
     		byte_t img_input_buffer[2*LANCZOS_A];
 
     		for (int l = 0; l < LANCZOS_A*2; l++){
-				#pragma HLS UNROLtL complete
+				#pragma HLS UNROLL complete
     			img_input_buffer[l] = l < LANCZOS_A-1 ? (byte_t)0 : img_input_2[in_idx++];
     		}
 			for (int xx = 0; xx < OUT_WIDTH; xx++) {
@@ -81,7 +80,7 @@ void lanczos(
 				byte_t *ptr = img_input_buffer;
 				for (int k = -2*LANCZOS_A; k < 0; k++){
 					int kk = in_idx + k;
-					sum += *(ptr++) * lanczos_kernel((kernel_in_t)((num_t)(xx*SCALE_D-kk*SCALE_N)/SCALE_N));
+					sum += *(ptr++) * lanczos_kernel((kernel_in_t)((num_t)(xx*SCALE_D-kk*SCALE_N)/(num_t)SCALE_N));
                 }
 				img_processed_rows[j][i][xx] = sum;
 			}
@@ -104,7 +103,7 @@ void lanczos(
 				num_t *ptr = img_input_buffer;
 				for (int k = -2*LANCZOS_A; k < 0; k++){
 					int kk = in_idx + k;
-					sum += *(ptr++) * lanczos_kernel((kernel_in_t)((num_t)(xx*SCALE_D-kk*SCALE_N)/SCALE_N));
+					sum += *(ptr++) * lanczos_kernel((kernel_in_t)((num_t)(xx*SCALE_D-kk*SCALE_N)/(num_t)SCALE_N));
 				}
 				img_output[j][xx][i] = clamp_to_byte(sum);
             }

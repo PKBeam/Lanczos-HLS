@@ -52,8 +52,10 @@ num_t is allowed to overflow, since the range can be mapped onto a 9 bit signed 
 */
 
 
-typedef ap_fixed<BIT_PRECISION+2,2> kernel_t;
-typedef ap_fixed<BIT_PRECISION+9,9> num_t;
+typedef ap_fixed<BIT_PRECISION+10,10> kernel_t;
+typedef ap_fixed<BIT_PRECISION+10,10> num_t;
+//typedef float kernel_t;
+//typedef float num_t;
 
 // Awful hack to get GCD calculated at compile time. Guess we are programming in C.
 // https://stackoverflow.com/a/78794
