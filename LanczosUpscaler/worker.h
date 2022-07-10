@@ -97,46 +97,6 @@ Complete partition workers
 
 */
 
-
-
-// Perform local clamping after whole claculation. check that this actually works. Designed for num_t = ap_fixed<X,9>
-byte_t clamp_to_byte(num_t x){
-	if (x[BIT_PRECISION+8]){
-		return x[BIT_PRECISION+7] ? 0 : 255;
-	} else {
-		return x;
-	}
-}
-
-template <typename T, int N>
-T shift_up(T reg[N], T next){
-    T out = reg[N-1];
-    for (k = N-2; k >= 0; k--) reg[k] = reg[k-1];
-    reg[0] = next;
-    return out;
-}
-
-
-template <typename T, int N>
-T shift_down(T reg[N], T next){
-    T out = reg[0];
-    for (k = 0; k < N-1; k++) reg[k] = reg[k+1];
-    reg[N-1] = next;
-    return out;
-}
-
-
-template <typename IN_T> num_t compute(IN_T[2*LANCZOS_A], kernel_t[2*LANCZOS_A]);
-template <typename IN_T>
-num_t compute(IN_T[2*LANCZOS_A] in, kernel_t[2*LANCZOS_A] kern){
-    num_t out = 0;
-    for(int i = 0; i < 2*LANCZOS_A; i++){
-        out += kern[i]*in[i];
-    }
-    return out;
-}
-
-
 template <int N, int IN_LEN, int OUT_LEN, int OFFSET>
 class proc {
 private:
@@ -160,29 +120,7 @@ public:
     int out_idx = 0;
     
     // Control logic to stop executing will be provided externally.
-    void exec(byte_t input[N][IN_LEN], kernel_t[2*LANCZOS_A] kern_vals, num_t output[OUT_LEN][IN_LEN]){
-        for(int i = 0; i < N; i++){
-            output[out_idx][i] = compute<byte_t>(input_buffers[i], kern_vals);
-        }
-        if (out_idx*SCALE_D >= (in_idx - OFFSET)*SCALE_N) step_input(input);
-        out_idx++;
-    }
-
-    void step_input(byte_t input[N][IN_LEN]){
-        for(int i = 0; i < N; i++){
-            shift_up<byte_t, 2*LANCZOS_A>(input_buffers[i], input[i][in_idx]);
-        }
-        in_idx++;
-    }
-
-    void initialize(byte_t input[N][IN_LEN]){
-        // clear and initialize buffer with first few values of input
-        out_idx = 0;
-        for (in_idx = -OFFSET; in_idx < LANCZOS_A*2 - OFFSET; in_idx++){
-            for(int i = 0; i < N; i++){
-                #pragma HLS UNROLL complete
-                input_buffers[i][j] =  in_idx < 0 ? (byte_t) 0 :input[i][in_idx];
-            }
-        }
-    }
+    void exec(byte_t input[N][IN_LEN], kernel_t[2*LANCZOS_A] kern_vals, num_t output[OUT_LEN][IN_LEN]);
+    void step_input(byte_t input[N][IN_LEN]);
+    void initialize(byte_t input[N][IN_LEN]);
 }

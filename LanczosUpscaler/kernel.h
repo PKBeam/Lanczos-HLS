@@ -1,3 +1,7 @@
 #include "lanczos.h"
 
-kernel_t lanczos_kernel(input_idx_t, output_idx_t, scale_t); // [scale] param unused when using fixed scaling.
+typedef int input_idx_t;
+typedef int output_idx_t;
+typedef float scale_t;
+
+kernel_t lanczos_kernel(input_idx_t, output_idx_t, scale_t);
