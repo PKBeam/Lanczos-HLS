@@ -29,9 +29,9 @@
 
 #endif
 */
-
-#ifndef lanczos_h
-#define lanczos_h
+//
+//#ifndef lanczos_h
+//#define lanczos_h
 
 #include <iostream>
 using namespace std;
@@ -52,8 +52,8 @@ num_t is allowed to overflow, since the range can be mapped onto a 9 bit signed 
 */
 
 
-typedef ap_fixed<BIT_PRECISION+10,10> kernel_t;
-typedef ap_fixed<BIT_PRECISION+10,10> num_t;
+typedef float kernel_t;
+typedef float num_t;
 //typedef float kernel_t;
 //typedef float num_t;
 
@@ -74,5 +74,5 @@ void lanczos(
     byte_t img_in[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
     byte_t img_out[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
 );
-
-#endif /* lanczos_h */
+//
+//#endif /* lanczos_h */
