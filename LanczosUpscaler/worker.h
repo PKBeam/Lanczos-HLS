@@ -130,7 +130,6 @@ T shift_up(T reg[N], T next){
     return out;
 }
 
-
 template <typename T, int N>
 T shift_down(T reg[N], T next){
     T out = reg[0];
@@ -149,14 +148,14 @@ num_t compute(IN_T in[2*LANCZOS_A], kernel_t kern[2*LANCZOS_A]){
     return out;
 }
 
-class RowWorker{
+class ColWorkers{
 public:
 	// offset = 0 when first out_idx is at the first pixel of the image.
 	// want that in_idx - 1 < (out_idx-offset)/scale + LANCZOS_A <= in_idx  upon calculation
-    const int offset;
-
+	const int offset;
+	int curr_offset;
     // One buffer per input row, each buffer is23 2A in width
-	byte_t input_buffers[IN_HEIGHT][LANCZOS_A*2];
+	byte_t input_buffers[IN_WIDTH][LANCZOS_A*2];
 
 
     // internally maintained counters. Treat these as read only!!
@@ -173,21 +172,26 @@ public:
     int in_idx = 0;
     int out_idx = 0;
 
-    RowWorker(int offset);
-    void exec(byte_t[IN_HEIGHT][IN_WIDTH], kernel_t[2*LANCZOS_A], num_t[COL_WORKERS][IN_HEIGHT]);
+    ColWorkers(int offset);
+    void exec(byte_t[IN_HEIGHT][IN_WIDTH], kernel_t[2*LANCZOS_A], num_t[IN_WIDTH][ROW_WORKERS]);
     void step_input(byte_t[IN_HEIGHT][IN_WIDTH]);
     void initialize(byte_t[IN_HEIGHT][IN_WIDTH]);
+    // out pos and write index are different: write index is the pointer offset. Out pos is the position of the
+    // pixel being written to after the input image is upscaled by SCALE.
+    void seek_write_index(int idx);
+    int get_out_pos();
 
 };
 
-class ColWorker{
+class RowWorkers{
 public:
 	// How many empty inputs there are upon initialize.
 	// This translates to how shifted the image is after we perform the operation.
     const int offset;
+	int curr_offset;
 
     // One buffer per input row, each buffer is 2A in width
-	num_t input_buffers[COL_WORKERS][LANCZOS_A*2];
+	num_t input_buffers[ROW_WORKERS][LANCZOS_A*2];
 
 	// internally maintained counters. Treat these as read only!!
     // Note:
@@ -204,10 +208,14 @@ public:
     int out_idx = 0;
 
     // Control logic to stop executing will be provided externally.
-    ColWorker(int offset);
-    void exec(num_t[COL_WORKERS][IN_HEIGHT], kernel_t[2*LANCZOS_A], byte_t[OUT_HEIGHT][COL_WORKERS]);
-    void step_input(num_t[COL_WORKERS][IN_HEIGHT]);
-    void initialize(num_t[COL_WORKERS][IN_HEIGHT]);
+    RowWorkers(int offset);
+    void exec(num_t[IN_WIDTH][ROW_WORKERS], kernel_t[2*LANCZOS_A], byte_t[ROW_WORKERS][OUT_WIDTH]);
+    void step_input(num_t[IN_WIDTH][ROW_WORKERS]);
+    void initialize(num_t[IN_WIDTH][ROW_WORKERS]);
+    // out pos and write index are different: write index is the pointer offset. Out pos is the position of the
+    // pixel being written to after the input image is upscaled by SCALE.
+    void seek_write_index(int idx);
+    int get_out_pos();
 };
 
 #endif

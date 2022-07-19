@@ -24,14 +24,18 @@
 //}
 
 kernel_t sinc(kernel_t x) {
-    return sin(x)/x;
+	if (x==0){
+		return 1;
+	}else{
+		return sin(x)/x;
+	}
 }
 
-kernel_t lanczos_kernel(kernel_t x) {
-    return sinc(M_PI * x) * sinc(M_PI * x / LANCZOS_A);
+kernel_t raw_lanczos_kernel(kernel_t x) {
+    return sinc(PI * x) * sinc(PI * x / LANCZOS_A);
 }
 
 kernel_t lanczos_kernel(input_idx_t input_idx, output_idx_t output_idx, scale_t scale){
-	kernel_t in_arg = (kernel_t)(output_idx*((kernel_t)1.0/SCALE) - input_idx*SCALE_N);
+	kernel_t in_arg = (kernel_t)(output_idx*((kernel_t)1.0/SCALE) - input_idx);
 	return raw_lanczos_kernel(in_arg);
 }
