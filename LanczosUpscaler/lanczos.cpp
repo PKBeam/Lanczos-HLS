@@ -10,6 +10,14 @@
 #include "kernel.h"
 //#include "hls_math.h"
 
+num_t img_processed_rows[NUM_CHANNELS][OUT_WIDTH][IN_HEIGHT];
+num_t buf1[COL_WORKERS][IN_HEIGHT];
+num_t buf2[COL_WORKERS][IN_HEIGHT];
+
+num_t** buf_read, buf_write;
+
+
+
 void lanczos(
     byte_t img_input[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
     byte_t img_output[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
@@ -44,6 +52,21 @@ void lanczos(
 
 			c_worker.exec(img_processed_rows[chan], kernel_vals, img_output[chan]);
 		}
+	}
+}
+
+void fillRowBuffer(byte_t in_img[IN_HEIGHT][IN_WIDTH], num_t** buf, RowWorker proc){
+	// TODO: kern = get kernel value
+	kernel_t* kern;
+	for (int i = 0; i < COL_WORKERS; i++){
+		proc.exec(in_img, kern, (num_t[COL_WORKERS][IN_HEIGHT])buf);
+	}
+}
+void fillColBuffer(num_t** buf, byte_t out_img[OUT_HEIGHT][OUT_WIDTH], ColWorker proc){
+	// TODO: kern = get kernel value
+	kernel_t* kern;
+	for (int i = 0; i < OUT_HEIGHT; i++){
+		proc.exec((num_t[COL_WORKERS][IN_HEIGHT]) buf, kern, out_img);
 	}
 }
 

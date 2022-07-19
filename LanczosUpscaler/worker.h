@@ -105,8 +105,8 @@ Row workers work on input -> Buf_write
 for(i = 0; i < ceil(OUT_WIDTH/N) - 1; i++){
 	BUF_WRITE, BUF_READ = BUF_READ, BUF_WRITE
 	// col workers work on buf_read -> row worker work on input -> BUF_WRTE
-	fillBuffer(BUF_READ, output, c)
-	fillBuffer(input, BUF_WRITE, r)
+	fillBuffer(input, BUF_WRITE, r) // byte to num_t
+	fillBuffer(BUF_READ, output, c) // num_T to byte
 }
 
 col workers work on buf_read -> output
@@ -172,9 +172,9 @@ public:
 
     int in_idx = 0;
     int out_idx = 0;
-    RowWorker
+
     RowWorker(int offset);
-    void exec(byte_t[IN_HEIGHT][IN_WIDTH], kernel_t[2*LANCZOS_A], num_t[OUT_WIDTH][IN_HEIGHT]);
+    void exec(byte_t[IN_HEIGHT][IN_WIDTH], kernel_t[2*LANCZOS_A], num_t[COL_WORKERS][IN_HEIGHT]);
     void step_input(byte_t[IN_HEIGHT][IN_WIDTH]);
     void initialize(byte_t[IN_HEIGHT][IN_WIDTH]);
 
@@ -187,7 +187,7 @@ public:
     const int offset;
 
     // One buffer per input row, each buffer is 2A in width
-	num_t input_buffers[OUT_WIDTH][LANCZOS_A*2];
+	num_t input_buffers[COL_WORKERS][LANCZOS_A*2];
 
 	// internally maintained counters. Treat these as read only!!
     // Note:
@@ -205,9 +205,9 @@ public:
 
     // Control logic to stop executing will be provided externally.
     ColWorker(int offset);
-    void exec(num_t[OUT_WIDTH][IN_HEIGHT], kernel_t[2*LANCZOS_A], byte_t[OUT_HEIGHT][OUT_WIDTH]);
-    void step_input(num_t[OUT_WIDTH][IN_HEIGHT]);
-    void initialize(num_t[OUT_WIDTH][IN_HEIGHT]);
+    void exec(num_t[COL_WORKERS][IN_HEIGHT], kernel_t[2*LANCZOS_A], byte_t[OUT_HEIGHT][COL_WORKERS]);
+    void step_input(num_t[COL_WORKERS][IN_HEIGHT]);
+    void initialize(num_t[COL_WORKERS][IN_HEIGHT]);
 };
 
 #endif

@@ -4,7 +4,7 @@
 
 RowWorker::RowWorker(int offset): offset(offset){}
 
-void RowWorker::exec(byte_t input[IN_HEIGHT][IN_WIDTH], kernel_t kern_vals[2*LANCZOS_A], num_t output[OUT_WIDTH][IN_HEIGHT]){
+void RowWorker::exec(byte_t input[IN_HEIGHT][IN_WIDTH], kernel_t kern_vals[2*LANCZOS_A], num_t output[COL_WORKERS][IN_HEIGHT]){
 	compute_loop:
     for(int i = 0; i < IN_HEIGHT; i++){
         output[out_idx][i] = compute<byte_t>(input_buffers[i], kern_vals);
@@ -57,33 +57,33 @@ byte_t clamp_to_byte(num_t x){
 
 ColWorker::ColWorker(int offset): offset(offset){}
 
-void ColWorker::exec(num_t input[OUT_WIDTH][IN_HEIGHT], kernel_t kern_vals[2*LANCZOS_A], byte_t output[OUT_HEIGHT][OUT_WIDTH]){
+void ColWorker::exec(num_t input[COL_WORKERS][IN_HEIGHT], kernel_t kern_vals[2*LANCZOS_A], byte_t output[COL_WORKERS][OUT_HEIGHT]){
 
 
 	compute_loop:
-    for(int i = 0; i < OUT_WIDTH; i++){
+    for(int i = 0; i < COL_WORKERS; i++){
 
-        output[out_idx][i] = clamp_to_byte(compute<num_t>(input_buffers[i], kern_vals));
+        output[i][out_idx] = clamp_to_byte(compute<num_t>(input_buffers[i], kern_vals));
     }
     out_idx++;
     if ((out_idx-offset)*SCALE_D >= (in_idx - LANCZOS_A)*SCALE_N) step_input(input);
 }
 
-void ColWorker::step_input(num_t input[OUT_WIDTH][IN_HEIGHT]){
-    for(int i = 0; i < OUT_WIDTH; i++){
+void ColWorker::step_input(num_t input[COL_WORKERS][IN_HEIGHT]){
+    for(int i = 0; i < COL_WORKERS; i++){
 
         shift_down<num_t, 2*LANCZOS_A>(input_buffers[i], in_idx >= IN_HEIGHT? (num_t) 0 : input[i][in_idx]);
     }
     in_idx++;
 }
 
-void ColWorker::initialize(num_t input[OUT_WIDTH][IN_HEIGHT]){
+void ColWorker::initialize(num_t input[COL_WORKERS][IN_HEIGHT]){
     // clear and initialize buffer with first few values of input
     out_idx = 0;
     // Get first value of in_idx
     in_idx = (-offset*SCALE_D)/SCALE_N - LANCZOS_A + 1; // integer division floors for me
     for (int j = 0; j < 2*LANCZOS_A; j++){
-    	for(int i = 0; i < OUT_WIDTH; i++){
+    	for(int i = 0; i < COL_WORKERS; i++){
 
             input_buffers[i][j] =  in_idx < 0 ? (num_t) 0 :input[i][in_idx];
         }
@@ -92,12 +92,12 @@ void ColWorker::initialize(num_t input[OUT_WIDTH][IN_HEIGHT]){
 }
 
 
-void row_worker_alone(byte_t img_in[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH], num_t img_out_ob[NUM_CHANNELS][OUT_WIDTH][IN_HEIGHT]){
+void row_worker_alone(byte_t img_in[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH], num_t img_out_ob[NUM_CHANNELS][COL_WORKERS][IN_HEIGHT]){
 	RowWorker r_worker(3);
 	for (int chan=0; chan< NUM_CHANNELS; chan++){
 
 		r_worker.initialize(img_in[chan]);
-		for(int i = 0; i < OUT_WIDTH; i++){
+		for(int i = 0; i < COL_WORKERS; i++){
 			// get kernel values
 			kernel_t kernel_vals[2*LANCZOS_A];
 

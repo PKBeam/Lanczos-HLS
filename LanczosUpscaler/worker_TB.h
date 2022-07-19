@@ -23,6 +23,7 @@ byte_t img_in[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH];
 byte_t img_out_ex[NUM_CHANNELS][IN_HEIGHT][OUT_WIDTH];
 // Flipped because of how the columns workers will operate
 num_t img_out_ob[NUM_CHANNELS][OUT_WIDTH][IN_HEIGHT];
+
 rgb_pixel_t img_interlaced_out_ex[IN_HEIGHT * OUT_WIDTH];
 rgb_pixel_t img_interlaced_out_ob[IN_HEIGHT * OUT_WIDTH];
 
