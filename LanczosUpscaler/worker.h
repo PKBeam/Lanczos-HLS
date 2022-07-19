@@ -93,61 +93,35 @@ worker (input, int col, next_signal, kernel_vals){
 
 }
 
-Complete partition workers
+
+
+RowWorker r(IN_HEIGHT);
+ColWorker c(N);
+
+BUF_READ[IN_HEIGHT][N]
+BUF_WRITE[IN_HEIGHT][N]
+
+Row workers work on input -> Buf_write
+for(i = 0; i < ceil(OUT_WIDTH/N) - 1; i++){
+	BUF_WRITE, BUF_READ = BUF_READ, BUF_WRITE
+	// col workers work on buf_read -> row worker work on input -> BUF_WRTE
+	fillBuffer(BUF_READ, output, c)
+	fillBuffer(input, BUF_WRITE, r)
+}
+
+col workers work on buf_read -> output
+
+fillBuffer(img, buf, proc)
+	kern = get kernel values
+	for i in range(N):
+		proc.exec(img, kern, buf)
+
 
 
 
 
 */
 
-// Perform local clamping after whole claculation. check that this actually works. Designed for num_t = ap_fixed<X,9>
-byte_t clamp_to_byte(num_t x){
-	if (x[BIT_PRECISION+8]){
-		return x[BIT_PRECISION+7] ? 0 : 255;
-	} else {
-		return x;
-	}
-}
-
-template <typename IN_T, typename OUT_T, int N, int IN_LEN, int OUT_LEN, int OFFSET>
-class Proc {
-public:
-    
-    // One buffer per input row, each buffer is 2A in width
-	IN_T input_buffers[N][LANCZOS_A*2];
-
-    // internally maintained counters. Treat these as read only!!
-    // Note:
-    // in_idx is the NEXT index to read from.
-    // out_idx is the NEXT index to write to. 
-    //
-    // Because out_idx requires entries ahead to be read, the correspoinding position
-    // in the input image that out_idx corresponds to is actually in the interval (in_idx - OFFSET - 1, in_idx - OFFSET]
-    //
-    // So we want out_idx/scale <= in_idx - OFFSET.
-    // This constraint translates to out_idx*scale_D <= (in_idx - OFFSET)*scale_N
-
-    int in_idx = 0; 
-    int out_idx = 0;
-    
-    // Control logic to stop executing will be provided externally.
-
-    void exec(IN_T[N][IN_LEN], kernel_t[2*LANCZOS_A], OUT_T[OUT_LEN][N]);
-    void step_input(IN_T[N][IN_LEN]);
-    void initialize(IN_T[N][IN_LEN]);
-};
-//template <typename x>
-//class testClass{
-//public:
-//	int a = 0;
-//	void test();
-//};
-//
-//template <typename x>
-//void testClass<x>::test(){};
-// instantiate templates
-
-// We actually need ALL templates in the .h file. thats just how templates work apparently.
 template <typename T, int N>
 T shift_up(T reg[N], T next){
     T out = reg[N-1];
@@ -169,49 +143,141 @@ template <typename IN_T>
 num_t compute(IN_T in[2*LANCZOS_A], kernel_t kern[2*LANCZOS_A]){
     num_t out = 0;
     for(int i = 0; i < 2*LANCZOS_A; i++){
-        out += kern[i]*in[i];
+	#pragma HLS UNROLL
+    	out += kern[i]*in[i];
     }
     return out;
 }
 
-template <typename IN_T, typename OUT_T, int N, int IN_LEN, int OUT_LEN, int OFFSET>
-void Proc<IN_T, OUT_T, N, IN_LEN, OUT_LEN, OFFSET>::exec(IN_T input[N][IN_LEN], kernel_t kern_vals[2*LANCZOS_A], OUT_T output[OUT_LEN][N]){
-    compute_loop:
-    for(int i = 0; i < N; i++){
-		#pragma HLS UNROLL complete
-        output[out_idx][i] = compute<IN_T>(input_buffers[i], kern_vals);
-    }
-    out_idx++;
-    printf("in_idx:%d, out_idx:%d\n",in_idx, out_idx);
-    cout << "buffers: " << input_buffers[IN_HEIGHT-1][0] << input_buffers[IN_HEIGHT-1][1] << input_buffers[IN_HEIGHT-1][2] << input_buffers[IN_HEIGHT-1][3] << endl;
+class RowWorker{
+public:
+	// offset = 0 when first out_idx is at the first pixel of the image.
+	// want that in_idx - 1 < (out_idx-offset)/scale + LANCZOS_A <= in_idx  upon calculation
+    const int offset;
 
-    if (out_idx*SCALE_D >= (in_idx + OFFSET - LANCZOS_A-1)*SCALE_N) step_input(input);
-}
+    // One buffer per input row, each buffer is23 2A in width
+	byte_t input_buffers[IN_HEIGHT][LANCZOS_A*2];
 
-template <typename IN_T, typename OUT_T, int N, int IN_LEN, int OUT_LEN, int OFFSET>
-void Proc<IN_T, OUT_T, N, IN_LEN, OUT_LEN, OFFSET>::step_input(IN_T input[N][IN_LEN]){
-    for(int i = 0; i < N; i++){
-		#pragma HLS UNROLL complete
-        shift_up<IN_T, 2*LANCZOS_A>(input_buffers[i], in_idx >= IN_LEN? (IN_T) 0 : input[i][in_idx]);
-    }
-    in_idx++;
-}
 
-template <typename IN_T, typename OUT_T, int N, int IN_LEN, int OUT_LEN, int OFFSET>
-void Proc<IN_T, OUT_T, N, IN_LEN, OUT_LEN, OFFSET>::initialize(IN_T input[N][IN_LEN]){
-    // clear and initialize buffer with first few values of input
-    out_idx = 0;
-    int j = LANCZOS_A*2-1;
-    for (in_idx = -OFFSET; in_idx < LANCZOS_A*2 - OFFSET; in_idx++){
-        for(int i = 0; i < N; i++){
-            #pragma HLS UNROLL complete
-            input_buffers[i][j] =  in_idx < 0 ? (IN_T) 0 :input[i][in_idx];
-        }
-        j--;
-    }
-}
+    // internally maintained counters. Treat these as read only!!
+    // Note:
+    // in_idx is the NEXT index to read from.
+    // out_idx is the NEXT index to write to.
+    //
+    // Because out_idx requires entries ahead to be read, the correspoinding position
+    // in the input image that out_idx corresponds to is actually in the interval (in_idx - offset - 1, in_idx - offset]
+    //
+    // So we want out_idx/scale <= in_idx - offset.
+    // This constraint translates to out_idx*scale_D <= (in_idx - offset)*scale_N
 
-// instantiate types in .h
-typedef Proc<byte_t, num_t, IN_HEIGHT, IN_WIDTH, OUT_WIDTH, 1> row_worker_t;
-typedef Proc<num_t, num_t, OUT_WIDTH, IN_HEIGHT, OUT_HEIGHT, 1> col_worker_t;
+    int in_idx = 0;
+    int out_idx = 0;
+    RowWorker
+    RowWorker(int offset);
+    void exec(byte_t[IN_HEIGHT][IN_WIDTH], kernel_t[2*LANCZOS_A], num_t[OUT_WIDTH][IN_HEIGHT]);
+    void step_input(byte_t[IN_HEIGHT][IN_WIDTH]);
+    void initialize(byte_t[IN_HEIGHT][IN_WIDTH]);
+
+};
+
+class ColWorker{
+public:
+	// How many empty inputs there are upon initialize.
+	// This translates to how shifted the image is after we perform the operation.
+    const int offset;
+
+    // One buffer per input row, each buffer is 2A in width
+	num_t input_buffers[OUT_WIDTH][LANCZOS_A*2];
+
+	// internally maintained counters. Treat these as read only!!
+    // Note:
+    // in_idx is the NEXT index to read from.
+    // out_idx is the NEXT index to write to.
+    //
+    // Because out_idx requires entries ahead to be read, the correspoinding position
+    // in the input image that out_idx corresponds to is actually in the interval (in_idx - offset - 1, in_idx - offset]
+    //
+    // So we want out_idx/scale <= in_idx - offset.
+    // This constraint translates to out_idx*scale_D <= (in_idx - offset)*scale_N
+
+    int in_idx = 0;
+    int out_idx = 0;
+
+    // Control logic to stop executing will be provided externally.
+    ColWorker(int offset);
+    void exec(num_t[OUT_WIDTH][IN_HEIGHT], kernel_t[2*LANCZOS_A], byte_t[OUT_HEIGHT][OUT_WIDTH]);
+    void step_input(num_t[OUT_WIDTH][IN_HEIGHT]);
+    void initialize(num_t[OUT_WIDTH][IN_HEIGHT]);
+};
+
 #endif
+
+
+
+// Template implementation for reference
+//template <typename IN_T, typename OUT_T, int N, int IN_LEN, int OUT_LEN, int OFFSET>
+//class Proc {
+//public:
+//
+//    // One buffer per input row, each buffer is 2A in width
+//	IN_T input_buffers[N][LANCZOS_A*2];
+//
+//    // internally maintained counters. Treat these as read only!!
+//    // Note:
+//    // in_idx is the NEXT index to read from.
+//    // out_idx is the NEXT index to write to.
+//    //
+//    // Because out_idx requires entries ahead to be read, the correspoinding position
+//    // in the input image that out_idx corresponds to is actually in the interval (in_idx - OFFSET - 1, in_idx - OFFSET]
+//    //
+//    // So we want out_idx/scale <= in_idx - OFFSET.
+//    // This constraint translates to out_idx*scale_D <= (in_idx - OFFSET)*scale_N
+//
+//    int in_idx = 0;
+//    int out_idx = 0;
+//
+//    // Control logic to stop executing will be provided externally.
+//
+//    void exec(IN_T[N][IN_LEN], kernel_t[2*LANCZOS_A], OUT_T[OUT_LEN][N]);
+//    void step_input(IN_T[N][IN_LEN]);
+//    void initialize(IN_T[N][IN_LEN]);
+//};
+//template <typename IN_T, typename OUT_T, int N, int IN_LEN, int OUT_LEN, int OFFSET>
+//void Proc<IN_T, OUT_T, N, IN_LEN, OUT_LEN, OFFSET>::exec(IN_T input[N][IN_LEN], kernel_t kern_vals[2*LANCZOS_A], OUT_T output[OUT_LEN][N]){
+//
+//	#pragma HLS ARRAY_PARTITION variable=p.input_buffers cyclic factor=2 dim=1
+//	#pragma HLS ARRAY_PARTITION variable=p.input_buffers complete dim=2
+//
+//	#pragma HLS PIPELINE
+//	compute_loop:
+//    for(int i = 0; i < N; i++){
+//		#pragma HLS UNROLL complete
+//        output[out_idx][i] = compute<IN_T>(input_buffers[i], kern_vals);
+//    }
+//    out_idx++;
+//    if (out_idx*SCALE_D >= (in_idx + OFFSET - LANCZOS_A-1)*SCALE_N) step_input(input);
+//}
+//
+//template <typename IN_T, typename OUT_T, int N, int IN_LEN, int OUT_LEN, int OFFSET>
+//void Proc<IN_T, OUT_T, N, IN_LEN, OUT_LEN, OFFSET>::step_input(IN_T input[N][IN_LEN]){
+//    for(int i = 0; i < N; i++){
+//		#pragma HLS UNROLL complete
+//        shift_up<IN_T, 2*LANCZOS_A>(input_buffers[i], in_idx >= IN_LEN? (IN_T) 0 : input[i][in_idx]);
+//    }
+//    in_idx++;
+//}
+//
+//template <typename IN_T, typename OUT_T, int N, int IN_LEN, int OUT_LEN, int OFFSET>
+//void Proc<IN_T, OUT_T, N, IN_LEN, OUT_LEN, OFFSET>::initialize(IN_T input[N][IN_LEN]){
+//    // clear and initialize buffer with first few values of input
+//    out_idx = 0;
+//    int j = LANCZOS_A*2-1;
+//    for (in_idx = -OFFSET; in_idx < LANCZOS_A*2 - OFFSET; in_idx++){
+//        for(int i = 0; i < N; i++){
+//            #pragma HLS UNROLL complete
+//            input_buffers[i][j] =  in_idx < 0 ? (IN_T) 0 :input[i][in_idx];
+//        }
+//        j--;
+//    }
+//}
+

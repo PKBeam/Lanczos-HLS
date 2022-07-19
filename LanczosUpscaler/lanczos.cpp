@@ -6,18 +6,44 @@
 //
 
 #include "lanczos.h"
-#include "hls_math.h"
-
-num_t img_processed_rows[NUM_CHANNELS][IN_HEIGHT][OUT_WIDTH];
+#include "worker.h"
+#include "kernel.h"
+//#include "hls_math.h"
 
 void lanczos(
     byte_t img_input[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
     byte_t img_output[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
 ) {
-	// unroll for each colour channel
-	for (int j = 0; j < NUM_CHANNELS; j++) {
-	#pragma HLS UNROLL
-		// TODO: init workers
+//	kernel_t kernel_vals[4] = {0.25, 0.25, 0.25, 0.25};
+	RowWorker r_worker(0);
+	ColWorker c_worker(0);
+	for (int chan=0; chan< NUM_CHANNELS; chan++){
+		// refreshes buffers and resets counters
+		r_worker.initialize(img_input[chan]);
+		for(int i = 0; i < OUT_WIDTH; i++){
+			// get kernel values
+			kernel_t kernel_vals[2*LANCZOS_A];
+
+			for(int j=0; j < 2*LANCZOS_A; j++){
+				kernel_vals[j] = lanczos_kernel(r_worker.in_idx -2*LANCZOS_A+j, r_worker.out_idx - r_worker.offset, (scale_t)SCALE);
+			}
+
+			r_worker.exec(img_input[chan], kernel_vals, img_processed_rows[chan]);
+		}
+
+		// refreshes buffers and resets counters
+		c_worker.initialize(img_processed_rows[chan]);
+		for(int i = 0; i < OUT_HEIGHT; i++){
+			// get kernel values
+			kernel_t kernel_vals[2*LANCZOS_A];
+
+			for(int j=0; j < 2*LANCZOS_A; j++){
+
+				kernel_vals[j] = lanczos_kernel(c_worker.in_idx - 2*LANCZOS_A+j, c_worker.out_idx - c_worker.offset, (scale_t)SCALE);
+			}
+
+			c_worker.exec(img_processed_rows[chan], kernel_vals, img_output[chan]);
+		}
 	}
 }
 
