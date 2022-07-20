@@ -11,10 +11,10 @@
 #include "kernel.h"
 //#include "hls_math.h"
 
-num_t buf1[OUT_HEIGHT][ROW_WORKERS], buf2[OUT_HEIGHT][ROW_WORKERS];
+num_t buf[2][OUT_HEIGHT][ROW_WORKERS];
 
-num_t (* buf_read)[ROW_WORKERS] = buf1;
-num_t (* buf_write)[ROW_WORKERS] = buf2;
+//num_t (* buf_read)[ROW_WORKERS] = buf1;
+//num_t (* buf_write)[ROW_WORKERS] = buf2;
 
 
 // old lanczos
@@ -58,7 +58,7 @@ num_t (* buf_write)[ROW_WORKERS] = buf2;
 
 void fillColBuffer(byte_t in_img[IN_HEIGHT][IN_WIDTH], num_t (* buf)[ROW_WORKERS], ColWorkers& proc){
 	// TODO: kern = get kernel value
-	static kernel_t kernel_vals[2*LANCZOS_A];
+	kernel_t kernel_vals[2*LANCZOS_A];
 	proc.seek_write_index(0);
 	for (int i = 0; i < ROW_WORKERS; i++){
 		for(int j=0; j < 2*LANCZOS_A; j++){
@@ -69,7 +69,7 @@ void fillColBuffer(byte_t in_img[IN_HEIGHT][IN_WIDTH], num_t (* buf)[ROW_WORKERS
 }
 
 void fillRowBuffer(num_t (* buf)[ROW_WORKERS], byte_t (* out_img)[OUT_WIDTH], RowWorkers& proc){
-	static kernel_t kernel_vals[2*LANCZOS_A];
+	kernel_t kernel_vals[2*LANCZOS_A];
 	// row takes new input for every new buffer given to it.
 	proc.initialize(buf);
 	for (int i = 0; i < OUT_WIDTH; i++){
@@ -88,23 +88,19 @@ void lanczos(
 	// Perform column lengthening first, then row lengthening
 	ColWorkers c(0);
 	RowWorkers r(0);
-	num_t (* temp)[ROW_WORKERS];
-
 	for (int chan=0; chan< NUM_CHANNELS; chan++){
 		byte_t (* out_img_ptr)[OUT_WIDTH] = out_img[chan];
 		// Column worker takes new input for every new channel.
 		c.initialize(in_img[chan]);
-
+		bool is_write_buf = 0;
 		for(int i = 0; i < ceil((double)OUT_HEIGHT/ROW_WORKERS); i++){
-			fillColBuffer(in_img[chan], buf_write, c); // byte to num_t
-			temp = buf_write;
-			buf_write = buf_read;
-			buf_read = temp;
-
+			fillColBuffer(in_img[chan], buf[is_write_buf], c); // byte to num_t
 			// col workers work on buf_read -> row worker work on input -> BUF_WRTE
-			fillRowBuffer(buf_read, out_img_ptr, r); // num_T to byte
+			is_write_buf = !is_write_buf;
+			fillRowBuffer(buf[!is_write_buf], out_img_ptr, r); // num_T to byte
 			// Shift location of image write down
 			out_img_ptr += ROW_WORKERS;
+
 		}
 	}
 }

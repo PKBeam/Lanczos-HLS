@@ -101,7 +101,7 @@ ColWorker c(N);
 BUF_READ[IN_HEIGHT][N]
 BUF_WRITE[IN_HEIGHT][N]
 
-Row workers work on input -> Buf_write
+fillBuffer(input, BUF_WRITE, r) // byte to num_t
 for(i = 0; i < ceil(OUT_WIDTH/N) - 1; i++){
 	BUF_WRITE, BUF_READ = BUF_READ, BUF_WRITE
 	// col workers work on buf_read -> row worker work on input -> BUF_WRTE
@@ -109,7 +109,7 @@ for(i = 0; i < ceil(OUT_WIDTH/N) - 1; i++){
 	fillBuffer(BUF_READ, output, c) // num_T to byte
 }
 
-col workers work on buf_read -> output
+fillBuffer(BUF_READ, output, c) // num_T to byte
 
 fillBuffer(img, buf, proc)
 	kern = get kernel values
