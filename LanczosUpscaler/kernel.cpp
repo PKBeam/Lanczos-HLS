@@ -1,9 +1,6 @@
-#include "hls_math.h"
 #include "kernel.h"
 
 
-#define PI ((num_t)M_PI)
-#define PI_SQ ((num_t)(M_PI * M_PI))
 
 #define B ((kernel_t)0.160102449173)
 #define K1 ((kernel_t)0.0605)
@@ -41,7 +38,7 @@ kernel_t raw_lanczos_kernel(kernel_t x) {
 // LUT for the lanczos kernel for a = 2
 kernel_t raw_lanczos_kernel_LUT_a2(input_idx_t input_idx, output_idx_t output_idx) {
 	#pragma HLS ARRAY_PARTITION variable=lanczos_LUT_a2 complete dim=1
-    output_idx_t x = abs(output_idx - (input_idx << 1));
+    output_idx_t x = abs_<output_idx_t>(output_idx - (input_idx << 1));
 	return lanczos_LUT_a2[x];
     //}
 }

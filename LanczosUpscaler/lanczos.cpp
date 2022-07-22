@@ -33,6 +33,7 @@ void fillRowBuffer(num_t (* buf)[ROW_WORKERS], byte_t (* out_img)[OUT_WIDTH], Ro
 	proc.initialize(buf);
 	fillRowBuffer_outWidth:
 	for (int i = 0; i < OUT_WIDTH; i++){
+
 		fillRowBuffer_outWidth_kernelVals:
 		for(int j = 0; j < 2*LANCZOS_A; j++){
 			#pragma HLS unroll
@@ -42,11 +43,33 @@ void fillRowBuffer(num_t (* buf)[ROW_WORKERS], byte_t (* out_img)[OUT_WIDTH], Ro
 	}
 }
 
+void process_channel(ColWorkers &c, RowWorkers &r, byte_t (* in_channel)[IN_WIDTH], byte_t (* out_channel)[OUT_WIDTH]){
+	byte_t (* out_img_ptr)[OUT_WIDTH] = out_channel;
+	// Column worker takes new input for every new channel.
+
+	#pragma HLS ARRAY_PARTITION variable=buf complete dim=1
+	c.initialize(in_channel);
+	bool is_write_buf = 0;
+	lanczosComputeBuffers:
+	fillColBuffer(in_channel, buf[is_write_buf], c); // byte to num_t
+	for(int i = 0; i < ceil((double)OUT_HEIGHT/ROW_WORKERS)-1; i++){
+		#pragma HLS DEPENDENCE variable=buf array intra false
+		// col workers work on buf_read -> row worker work on input -> BUF_WRTE
+		is_write_buf = !is_write_buf;
+
+		fillColBuffer(in_channel, buf[is_write_buf], c); // byte to num_t
+		fillRowBuffer(buf[!is_write_buf], out_img_ptr, r); // num_T to byte
+		// Shift location of image write down
+		out_img_ptr += ROW_WORKERS;
+	}
+	is_write_buf = !is_write_buf;
+	fillRowBuffer(buf[!is_write_buf], out_img_ptr, r); // num_T to byte
+}
+
 void lanczos(
     byte_t in_img[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
     byte_t out_img[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
 ) {
-#pragma HLS ARRAY_PARTITION variable=buf complete dim=1
 
 	// Perform column lengthening first, then row lengthening
 	ColWorkers c(0);
@@ -57,19 +80,6 @@ void lanczos(
 
 	colourChannels:
 	for (int chan=0; chan< NUM_CHANNELS; chan++){
-		byte_t (* out_img_ptr)[OUT_WIDTH] = out_img[chan];
-		// Column worker takes new input for every new channel.
-		c.initialize(in_img[chan]);
-		bool is_write_buf = 0;
-		lanczosComputeBuffers:
-		for(int i = 0; i < ceil((double)OUT_HEIGHT/ROW_WORKERS); i++){
-			fillColBuffer(in_img[chan], buf[is_write_buf], c); // byte to num_t
-			// col workers work on buf_read -> row worker work on input -> BUF_WRTE
-			is_write_buf = !is_write_buf;
-			fillRowBuffer(buf[!is_write_buf], out_img_ptr, r); // num_T to byte
-			// Shift location of image write down
-			out_img_ptr += ROW_WORKERS;
-
-		}
+		process_channel(c, r, in_img[chan], out_img[chan]);
 	}
 }

@@ -36,7 +36,6 @@ void ColWorkers::initialize(byte_t input[IN_HEIGHT][IN_WIDTH]){
     for (int j = 0; j < 2*LANCZOS_A; j++){
     	colWorkers_init_width:
         for(int i = 0; i < IN_WIDTH; i++){
-
             input_buffers[i][j] =  in_idx < 0 ? (byte_t) 0 :input[in_idx][i];
         }
         in_idx ++;
