@@ -17,7 +17,6 @@ void ColWorkers::exec(byte_t input[IN_HEIGHT][IN_WIDTH], kernel_t kern_vals[2*LA
 
 void ColWorkers::step_input(byte_t input[IN_HEIGHT][IN_WIDTH]){
     for(int i = 0; i < IN_WIDTH; i++){
-
     	shift_down<byte_t, 2*LANCZOS_A>(input_buffers[i], in_idx >= IN_HEIGHT? (byte_t) 0 : input[in_idx][i]);
     }
     in_idx++;
