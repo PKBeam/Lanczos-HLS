@@ -142,7 +142,7 @@ template <typename IN_T>
 num_t compute(IN_T in[2*LANCZOS_A], kernel_t kern[2*LANCZOS_A]){
     num_t out = 0;
     for(int i = 0; i < 2*LANCZOS_A; i++){
-	#pragma HLS UNROLL
+		#pragma HLS UNROLL
     	out += kern[i]*in[i];
     }
     return out;

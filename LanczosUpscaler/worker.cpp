@@ -7,8 +7,9 @@ ColWorkers::ColWorkers(int offset): offset(offset){
 }
 
 void ColWorkers::exec(byte_t input[IN_HEIGHT][IN_WIDTH], kernel_t kern_vals[2*LANCZOS_A], num_t output[IN_WIDTH][ROW_WORKERS]){
-	compute_loop:
+	col_compute_loop:
     for(int i = 0; i < IN_WIDTH; i++){
+		#pragma HLS PIPELINE
         output[i][out_idx] = compute<byte_t>(input_buffers[i], kern_vals);
     }
     out_idx++;
@@ -16,6 +17,7 @@ void ColWorkers::exec(byte_t input[IN_HEIGHT][IN_WIDTH], kernel_t kern_vals[2*LA
 }
 
 void ColWorkers::step_input(byte_t input[IN_HEIGHT][IN_WIDTH]){
+	colWorkers_stepBuffers:
     for(int i = 0; i < IN_WIDTH; i++){
     	shift_down<byte_t, 2*LANCZOS_A>(input_buffers[i], in_idx >= IN_HEIGHT? (byte_t) 0 : input[in_idx][i]);
     }
@@ -30,7 +32,9 @@ void ColWorkers::initialize(byte_t input[IN_HEIGHT][IN_WIDTH]){
     curr_offset = offset;
     // Get first value of in_idx
     in_idx = (-offset*SCALE_D)/SCALE_N - LANCZOS_A + 1; // integer division floors for me
+    colWorkers_init:
     for (int j = 0; j < 2*LANCZOS_A; j++){
+    	colWorkers_init_width:
         for(int i = 0; i < IN_WIDTH; i++){
 
             input_buffers[i][j] =  in_idx < 0 ? (byte_t) 0 :input[in_idx][i];
@@ -72,8 +76,9 @@ RowWorkers::RowWorkers(int offset): offset(offset){
 }
 
 void RowWorkers::exec(num_t input[OUT_HEIGHT][ROW_WORKERS], kernel_t kern_vals[2*LANCZOS_A], byte_t output[ROW_WORKERS][OUT_WIDTH]){
-	compute_loop:
+	row_compute_loop:
     for(int i = 0; i < ROW_WORKERS; i++){
+		#pragma HLS PIPELINE
         output[i][out_idx] = clamp_to_byte(compute<num_t>(input_buffers[i], kern_vals));
     }
     out_idx++;
@@ -81,8 +86,8 @@ void RowWorkers::exec(num_t input[OUT_HEIGHT][ROW_WORKERS], kernel_t kern_vals[2
 }
 
 void RowWorkers::step_input(num_t input[OUT_HEIGHT][ROW_WORKERS]){
+	rowWorkers_stepBuffers:
     for(int i = 0; i < ROW_WORKERS; i++){
-
         shift_down<num_t, 2*LANCZOS_A>(input_buffers[i], in_idx >= IN_WIDTH? (num_t) 0 : input[in_idx][i]);
     }
     in_idx++;
@@ -94,7 +99,9 @@ void RowWorkers::initialize(num_t input[OUT_HEIGHT][ROW_WORKERS]){
     curr_offset = offset;
     // Get first value of in_idx
     in_idx = (-offset*SCALE_D)/SCALE_N - LANCZOS_A + 1; // integer division floors for me
+    rowWorkers_init:
     for (int j = 0; j < 2*LANCZOS_A; j++){
+    	rowWorkers_init_inner:
     	for(int i = 0; i < ROW_WORKERS; i++){
 
             input_buffers[i][j] =  in_idx < 0 ? (num_t) 0 :input[in_idx][i];
@@ -111,23 +118,3 @@ void RowWorkers::seek_write_index(int idx){
 int RowWorkers::get_out_pos(){
 	return out_idx - curr_offset;
 }
-
-
-//void row_worker_alone(byte_t img_in[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH], num_t img_out_ob[NUM_CHANNELS][OUT_HEIGHT][IN_WIDTH]){
-//	ColWorkers c_worker(3);
-//	for (int chan=0; chan < NUM_CHANNELS; chan++){
-//
-//		c_worker.initialize(img_in[chan]);
-//		for(int i = 0; i < ROW_WORKERS; i++){
-//			// get kernel values
-//			kernel_t kernel_vals[2*LANCZOS_A];
-//
-//			for(int j=0; j < 2*LANCZOS_A; j++){
-//
-//				kernel_vals[j] = lanczos_kernel(c_worker.in_idx - 2*LANCZOS_A + j, c_worker.out_idx - c_worker.offset, (scale_t)SCALE);
-//
-//			}
-//			c_worker.exec(img_in[chan], kernel_vals, img_out_ob[chan]);
-//		}
-//	}
-//}
