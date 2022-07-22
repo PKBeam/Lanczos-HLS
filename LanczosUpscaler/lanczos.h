@@ -52,8 +52,8 @@ num_t is allowed to overflow, since the range can be mapped onto a 9 bit signed 
 */
 
 
-typedef float kernel_t;
-typedef float num_t;
+typedef ap_fixed<20, 10> kernel_t;
+typedef ap_fixed<20, 10> num_t;
 
 // GCD is defined in stb.cpp 
 int gcd(int, int);

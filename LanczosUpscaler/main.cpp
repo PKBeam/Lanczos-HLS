@@ -1,5 +1,7 @@
 #include "lanczos.h"
 
+#define FULL_TB
+
 #ifdef FULL_TB
 #define TB_NAME "full TB"
 #include "full_TB.h"

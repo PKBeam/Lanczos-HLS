@@ -23,10 +23,13 @@
 ////	return ps1 - s*(ps1 + p2*p2*B);
 //}
 
+// lanczos(x/2) for x = 0, 1, 2, 3, 4
+kernel_t lanczos_LUT_a2[5] = {1, 0.573159, 0, -0.0636844, 0};
+/*
 kernel_t sinc(kernel_t x) {
-	if (x==0){
+	if (x == 0){
 		return 1;
-	}else{
+	} else {
 		return sin(x)/x;
 	}
 }
@@ -34,8 +37,19 @@ kernel_t sinc(kernel_t x) {
 kernel_t raw_lanczos_kernel(kernel_t x) {
     return sinc(PI * x) * sinc(PI * x / LANCZOS_A);
 }
+*/
+// LUT for the lanczos kernel for a = 2
+kernel_t raw_lanczos_kernel_LUT_a2(input_idx_t input_idx, output_idx_t output_idx) {
+    output_idx_t x = abs(output_idx - (input_idx << 1));
+    //if (x >= 4) {
+    //	return 0;
+    //} else {
+    	return lanczos_LUT_a2[x];
+    //}
+}
 
 kernel_t lanczos_kernel(input_idx_t input_idx, output_idx_t output_idx, scale_t scale){
-	kernel_t in_arg = (kernel_t)(output_idx*((kernel_t)1.0/SCALE) - input_idx);
-	return raw_lanczos_kernel(in_arg);
+	//kernel_t in_arg = (kernel_t)(output_idx*((kernel_t)1.0/SCALE) - input_idx);
+	//return raw_lanczos_kernel(in_arg);
+	return raw_lanczos_kernel_LUT_a2(input_idx, output_idx);
 }
