@@ -18,6 +18,7 @@ void fillColBuffer(byte_t in_img[IN_HEIGHT][IN_WIDTH], num_t (* buf)[ROW_WORKERS
 	proc.seek_write_index(0);
 	fillColBuffer_rowWorkerWidth:
 	for (int i = 0; i < ROW_WORKERS; i++){
+
 		fillColBuffer_rowWorkerWidth_kernelVals:
 		for(int j = 0; j < 2*LANCZOS_A; j++){
 			#pragma HLS unroll
@@ -50,11 +51,11 @@ void lanczos(
 
 	// Perform column lengthening first, then row lengthening
 	ColWorkers c(0);
+	//#pragma HLS ARRAY_PARTITION variable=c.inputBuffers complete dim=1
 	#pragma HLS ARRAY_PARTITION variable=c.inputBuffers complete dim=2
-
 	RowWorkers r(0);
+	//#pragma HLS ARRAY_PARTITION variable=r.inputBuffers complete dim=1
 	#pragma HLS ARRAY_PARTITION variable=r.inputBuffers complete dim=2
-
 	colourChannels:
 	for (int chan=0; chan< NUM_CHANNELS; chan++){
 		byte_t (* out_img_ptr)[OUT_WIDTH] = out_img[chan];
