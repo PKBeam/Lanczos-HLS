@@ -1,4 +1,5 @@
 #include "lanczos.h"
+#include "cyclic_buffer/cyclic_buffer.h"
 #ifndef WORKER_H
 #define WORKER_H
 // worker usage be like:
@@ -122,32 +123,6 @@ fillBuffer(img, buf, proc)
 
 */
 
-template <typename T, int N>
-T shift_up(T reg[N], T next){
-    T out = reg[N-1];
-    for (int k = N-1; k > 0; k--) reg[k] = reg[k-1];
-    reg[0] = next;
-    return out;
-}
-
-template <typename T, int N>
-T shift_down(T reg[N], T next){
-    T out = reg[0];
-    for (int k = 0; k < N-1; k++) reg[k] = reg[k+1];
-    reg[N-1] = next;
-    return out;
-}
-
-template <typename IN_T>
-num_t compute(IN_T in[2*LANCZOS_A], kernel_t kern[2*LANCZOS_A]){
-    num_t out = 0;
-    for(int i = 0; i < 2*LANCZOS_A; i++){
-		#pragma HLS UNROLL
-    	out += kern[i]*in[i];
-    }
-    return out;
-}
-
 class ColWorkers{
 public:
 	// offset = 0 when first out_idx is at the first pixel of the image.
@@ -155,8 +130,8 @@ public:
 	const int offset;
 	int curr_offset;
     // One buffer per input row, each buffer is23 2A in width
-	byte_t input_buffers[IN_WIDTH][LANCZOS_A*2];
-
+	//byte_t input_buffers[IN_WIDTH][LANCZOS_A*2];
+	CyclicBuffer<byte_t, ap_uint<2>, LANCZOS_A*2> input_buffers[IN_WIDTH];
 
     // internally maintained counters. Treat these as read only!!
     // Note:
@@ -191,7 +166,8 @@ public:
 	int curr_offset;
 
     // One buffer per input row, each buffer is 2A in width
-	num_t input_buffers[ROW_WORKERS][LANCZOS_A*2];
+	//num_t input_buffers[ROW_WORKERS][LANCZOS_A*2];
+	CyclicBuffer<num_t, ap_uint<2>, LANCZOS_A*2> input_buffers[ROW_WORKERS];
 
 	// internally maintained counters. Treat these as read only!!
     // Note:

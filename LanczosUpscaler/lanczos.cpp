@@ -47,15 +47,16 @@ void lanczos(
     byte_t in_img[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
     byte_t out_img[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
 ) {
+#pragma HLS INTERFACE axis register both port=in_img
 #pragma HLS ARRAY_PARTITION variable=buf complete dim=1
 
 	// Perform column lengthening first, then row lengthening
 	ColWorkers c(0);
 	//#pragma HLS ARRAY_PARTITION variable=c.inputBuffers complete dim=1
-	#pragma HLS ARRAY_PARTITION variable=c.inputBuffers complete dim=2
+	//#pragma HLS ARRAY_PARTITION variable=c.inputBuffers complete dim=2
 	RowWorkers r(0);
 	//#pragma HLS ARRAY_PARTITION variable=r.inputBuffers complete dim=1
-	#pragma HLS ARRAY_PARTITION variable=r.inputBuffers complete dim=2
+	//#pragma HLS ARRAY_PARTITION variable=r.inputBuffers complete dim=2
 	colourChannels:
 	for (int chan=0; chan< NUM_CHANNELS; chan++){
 		byte_t (* out_img_ptr)[OUT_WIDTH] = out_img[chan];
