@@ -11,75 +11,79 @@
 #include "kernel.h"
 //#include "hls_math.h"
 
-num_t buf[2][IN_WIDTH][ROW_WORKERS];
+ColWorkers c(0);
+RowWorkers r(0);
 
-void fillColBuffer(byte_t in_img[IN_HEIGHT][IN_WIDTH], num_t (* buf)[ROW_WORKERS], ColWorkers& proc){
+void fillColBuffer(byte_t in_img[IN_HEIGHT][IN_WIDTH], num_t (* buf)[ROW_WORKERS]){
 	kernel_t kernel_vals[2*LANCZOS_A];
-	proc.seek_write_index(0);
+	c.seek_write_index(0);
 	fillColBuffer_rowWorkerWidth:
 	for (int i = 0; i < ROW_WORKERS; i++){
 		fillColBuffer_rowWorkerWidth_kernelVals:
 		for(int j = 0; j < 2*LANCZOS_A; j++){
 			#pragma HLS unroll
-			kernel_vals[j] = lanczos_kernel(proc.in_idx - 2*LANCZOS_A+j, proc.get_out_pos(), (scale_t)SCALE);
+			kernel_vals[j] = lanczos_kernel(c.in_idx - 2*LANCZOS_A+j, c.get_out_pos(), (scale_t)SCALE);
 		}
-		proc.exec(in_img, kernel_vals, buf);
+		c.exec(in_img, kernel_vals, buf);
 	}
 }
 
-void fillRowBuffer(num_t (* buf)[ROW_WORKERS], byte_t (* out_img)[OUT_WIDTH], RowWorkers& proc){
+void fillRowBuffer(num_t (* buf)[ROW_WORKERS], byte_t (* out_img)[OUT_WIDTH]){
 	kernel_t kernel_vals[2*LANCZOS_A];
 	// row takes new input for every new buffer given to it.
-	proc.initialize(buf);
+	r.initialize(buf);
 	fillRowBuffer_outWidth:
 	for (int i = 0; i < OUT_WIDTH; i++){
-
+		#pragma HLS PIPELINE
 		fillRowBuffer_outWidth_kernelVals:
 		for(int j = 0; j < 2*LANCZOS_A; j++){
 			#pragma HLS unroll
-			kernel_vals[j] = lanczos_kernel(proc.in_idx - 2*LANCZOS_A+j, proc.get_out_pos(), (scale_t)SCALE);
+			kernel_vals[j] = lanczos_kernel(r.in_idx - 2*LANCZOS_A+j, r.get_out_pos(), (scale_t)SCALE);
 		}
-		proc.exec(buf, kernel_vals, out_img);
+		r.exec(buf, kernel_vals, out_img);
 	}
 }
 
-void process_channel(ColWorkers &c, RowWorkers &r, byte_t (* in_channel)[IN_WIDTH], byte_t (* out_channel)[OUT_WIDTH]){
-	byte_t (* out_img_ptr)[OUT_WIDTH] = out_channel;
+void stream_out(byte_t buf2[ROW_WORKERS][OUT_WIDTH], byte_t (* out_channel)[OUT_WIDTH]){
+	for(int i = 0; i < ROW_WORKERS; i++){
+
+		for(int j = 0; j < OUT_WIDTH; j++){
+			#pragma HLS PIPELINE
+			#pragma HLS UNROLL factor=4
+			#pragma HLS LOOP_FLATTEN off
+			out_channel[i][j] = buf2[i][j];
+		}
+	}
+
+}
+void process_channel(byte_t (* in_channel)[IN_WIDTH], byte_t (* out_channel)[OUT_WIDTH]){
 	// Column worker takes new input for every new channel.
-
-	#pragma HLS ARRAY_PARTITION variable=buf complete dim=1
 	c.initialize(in_channel);
-	bool is_write_buf = 0;
 	lanczosComputeBuffers:
-	fillColBuffer(in_channel, buf[is_write_buf], c); // byte to num_t
-	for(int i = 0; i < ceil((double)OUT_HEIGHT/ROW_WORKERS)-1; i++){
-		#pragma HLS DEPENDENCE variable=buf array intra false
-		// col workers work on buf_read -> row worker work on input -> BUF_WRTE
-		is_write_buf = !is_write_buf;
-
-		fillColBuffer(in_channel, buf[is_write_buf], c); // byte to num_t
-		fillRowBuffer(buf[!is_write_buf], out_img_ptr, r); // num_T to byte
-		// Shift location of image write down
-		out_img_ptr += ROW_WORKERS;
+	for(int i = 0; i < (OUT_HEIGHT+ROW_WORKERS-1)/ROW_WORKERS; i++){
+		#pragma HLS DATAFLOW
+		num_t buf1[IN_WIDTH][ROW_WORKERS];
+		#pragma HLS ARRAY_PARTITION variable=buf1 complete dim=2
+		byte_t buf2[ROW_WORKERS][OUT_WIDTH];
+		#pragma HLS ARRAY_PARTITION variable=buf2 complete dim=1
+		byte_t (* out_img_ptr)[OUT_WIDTH] = out_channel + ROW_WORKERS*i;
+		fillColBuffer(in_channel, buf1); // byte to num_t
+		fillRowBuffer(buf1, buf2); // num_T to byte
+		stream_out(buf2, out_img_ptr);
 	}
-	is_write_buf = !is_write_buf;
-	fillRowBuffer(buf[!is_write_buf], out_img_ptr, r); // num_T to byte
 }
+
 
 void lanczos(
     byte_t in_img[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
     byte_t out_img[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
 ) {
-
+#pragma HLS INTERFACE axis register both port=in_img
+#pragma HLS INTERFACE axis register both port=out_img
 	// Perform column lengthening first, then row lengthening
-	ColWorkers c(0);
-	#pragma HLS ARRAY_PARTITION variable=c.inputBuffers complete dim=2
-
-	RowWorkers r(0);
-	#pragma HLS ARRAY_PARTITION variable=r.inputBuffers complete dim=2
 
 	colourChannels:
 	for (int chan=0; chan< NUM_CHANNELS; chan++){
-		process_channel(c, r, in_img[chan], out_img[chan]);
+		process_channel(in_img[chan], out_img[chan]);
 	}
 }

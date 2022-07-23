@@ -33,10 +33,10 @@
 #ifndef lanczos_h
 #define lanczos_h
 
+#include "ap_fixed.h"
 #include <iostream>
 using namespace std;
 #include <stdio.h>
-#include "ap_fixed.h"
 #include "params.h"
 
 #define MAX(a, b) (a > b ? a : b)
