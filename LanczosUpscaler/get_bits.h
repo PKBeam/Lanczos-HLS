@@ -1,0 +1,122 @@
+// get_bits.h
+// INPUT: #define GET_BITS_INPUT_1
+
+#if (GET_BITS_INPUT_1 < 1)
+#define GET_BITS_OUTPUT_1 0
+#elif (GET_BITS_INPUT_1 < 2)
+#define GET_BITS_OUTPUT_1 1
+#elif (GET_BITS_INPUT_1 < 4)
+#define GET_BITS_OUTPUT_1 2
+#elif (GET_BITS_INPUT_1 < 8)
+#define GET_BITS_OUTPUT_1 3
+#elif (GET_BITS_INPUT_1 < 16)
+#define GET_BITS_OUTPUT_1 4
+#elif (GET_BITS_INPUT_1 < 32)
+#define GET_BITS_OUTPUT_1 5
+#elif (GET_BITS_INPUT_1 < 64)
+#define GET_BITS_OUTPUT_1 6
+#elif (GET_BITS_INPUT_1 < 128)
+#define GET_BITS_OUTPUT_1 7
+#elif (GET_BITS_INPUT_1 < 256)
+#define GET_BITS_OUTPUT_1 8
+#elif (GET_BITS_INPUT_1 < 512)
+#define GET_BITS_OUTPUT_1 9
+#elif (GET_BITS_INPUT_1 < 1024)
+#define GET_BITS_OUTPUT_1 10
+#elif (GET_BITS_INPUT_1 < 2048)
+#define GET_BITS_OUTPUT_1 11
+#elif (GET_BITS_INPUT_1 < 4096)
+#define GET_BITS_OUTPUT_1 12
+#elif (GET_BITS_INPUT_1 < 8192)
+#define GET_BITS_OUTPUT_1 13
+#endif
+
+#if (GET_BITS_INPUT_2 < 1)
+#define GET_BITS_OUTPUT_2 0
+#elif (GET_BITS_INPUT_2 < 2)
+#define GET_BITS_OUTPUT_2 1
+#elif (GET_BITS_INPUT_2 < 4)
+#define GET_BITS_OUTPUT_2 2
+#elif (GET_BITS_INPUT_2 < 8)
+#define GET_BITS_OUTPUT_2 3
+#elif (GET_BITS_INPUT_2 < 16)
+#define GET_BITS_OUTPUT_2 4
+#elif (GET_BITS_INPUT_2 < 32)
+#define GET_BITS_OUTPUT_2 5
+#elif (GET_BITS_INPUT_2 < 64)
+#define GET_BITS_OUTPUT_2 6
+#elif (GET_BITS_INPUT_2 < 128)
+#define GET_BITS_OUTPUT_2 7
+#elif (GET_BITS_INPUT_2 < 256)
+#define GET_BITS_OUTPUT_2 8
+#elif (GET_BITS_INPUT_2 < 512)
+#define GET_BITS_OUTPUT_2 9
+#elif (GET_BITS_INPUT_2 < 1024)
+#define GET_BITS_OUTPUT_2 10
+#elif (GET_BITS_INPUT_2 < 2048)
+#define GET_BITS_OUTPUT_2 11
+#elif (GET_BITS_INPUT_2 < 4096)
+#define GET_BITS_OUTPUT_2 12
+#elif (GET_BITS_INPUT_2 < 8192)
+#define GET_BITS_OUTPUT_2 13
+#endif
+
+#if (GET_BITS_INPUT_3 < 1)
+#define GET_BITS_OUTPUT_3 0
+#elif (GET_BITS_INPUT_3 < 2)
+#define GET_BITS_OUTPUT_3 1
+#elif (GET_BITS_INPUT_3 < 4)
+#define GET_BITS_OUTPUT_3 2
+#elif (GET_BITS_INPUT_3 < 8)
+#define GET_BITS_OUTPUT_3 3
+#elif (GET_BITS_INPUT_3 < 16)
+#define GET_BITS_OUTPUT_3 4
+#elif (GET_BITS_INPUT_3 < 32)
+#define GET_BITS_OUTPUT_3 5
+#elif (GET_BITS_INPUT_3 < 64)
+#define GET_BITS_OUTPUT_3 6
+#elif (GET_BITS_INPUT_3 < 128)
+#define GET_BITS_OUTPUT_3 7
+#elif (GET_BITS_INPUT_3 < 256)
+#define GET_BITS_OUTPUT_3 8
+#elif (GET_BITS_INPUT_3 < 512)
+#define GET_BITS_OUTPUT_3 9
+#elif (GET_BITS_INPUT_3 < 1024)
+#define GET_BITS_OUTPUT_3 10
+#elif (GET_BITS_INPUT_3 < 2048)
+#define GET_BITS_OUTPUT_3 11
+#elif (GET_BITS_INPUT_3 < 4096)
+#define GET_BITS_OUTPUT_3 12
+#elif (GET_BITS_INPUT_3 < 8192)
+#define GET_BITS_OUTPUT_3 13
+#endif
+
+#if (GET_BITS_INPUT_4 < 1)
+#define GET_BITS_OUTPUT_4 0
+#elif (GET_BITS_INPUT_4 < 2)
+#define GET_BITS_OUTPUT_4 1
+#elif (GET_BITS_INPUT_4 < 4)
+#define GET_BITS_OUTPUT_4 2
+#elif (GET_BITS_INPUT_4 < 8)
+#define GET_BITS_OUTPUT_4 3
+#elif (GET_BITS_INPUT_4 < 16)
+#define GET_BITS_OUTPUT_4 4
+#elif (GET_BITS_INPUT_4 < 32)
+#define GET_BITS_OUTPUT_4 5
+#elif (GET_BITS_INPUT_4 < 64)
+#define GET_BITS_OUTPUT_4 6
+#elif (GET_BITS_INPUT_4 < 128)
+#define GET_BITS_OUTPUT_4 7
+#elif (GET_BITS_INPUT_4 < 256)
+#define GET_BITS_OUTPUT_4 8
+#elif (GET_BITS_INPUT_4 < 512)
+#define GET_BITS_OUTPUT_4 9
+#elif (GET_BITS_INPUT_4 < 1024)
+#define GET_BITS_OUTPUT_4 10
+#elif (GET_BITS_INPUT_4 < 2048)
+#define GET_BITS_OUTPUT_4 11
+#elif (GET_BITS_INPUT_4 < 4096)
+#define GET_BITS_OUTPUT_4 12
+#elif (GET_BITS_INPUT_4 < 8192)
+#define GET_BITS_OUTPUT_4 13
+#endif

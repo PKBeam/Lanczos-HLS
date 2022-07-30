@@ -12,9 +12,8 @@
 #include "kernel.h"
 #endif
 
-
-
 int main(int argc, char* argv[]){
 	printf("Running " TB_NAME "\n");
+	printf ("%d\n", SCALE_D, SCALE_N);
 	sim_tb(argc, argv);
 }

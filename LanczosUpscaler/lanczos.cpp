@@ -14,6 +14,24 @@
 ColWorkers c(0);
 RowWorkers r(0);
 
+byte_el_t get_item(byte_t &x, int i){
+	return x(i*8+7, i*8);
+}
+
+
+void set_item(byte_t &x, int i, byte_el_t y){
+	x(i*8+7, i*8) = y;
+}
+
+num_el_t get_item(num_t &x, int i){
+	return x((i+1)*(INTEGER_BITS+BIT_PRECISION)-1, i*(INTEGER_BITS+BIT_PRECISION));
+}
+
+void set_item(num_t &x, int i, num_el_t y){
+	x((i+1)*(INTEGER_BITS+BIT_PRECISION)-1, i*(INTEGER_BITS+BIT_PRECISION)) = y;
+}
+
+
 void fillColBuffer(byte_t in_img[IN_HEIGHT][IN_WIDTH], num_t (* buf)[ROW_WORKERS]){
 	kernel_t kernel_vals[2*LANCZOS_A];
 	c.seek_write_index(0);
@@ -49,13 +67,13 @@ void stream_out(byte_t buf2[ROW_WORKERS][OUT_WIDTH], byte_t (* out_channel)[OUT_
 
 		for(int j = 0; j < OUT_WIDTH; j++){
 			#pragma HLS PIPELINE
-			#pragma HLS UNROLL factor=4
+			#pragma HLS UNROLL factor=2
 			#pragma HLS LOOP_FLATTEN off
 			out_channel[i][j] = buf2[i][j];
 		}
 	}
-
 }
+
 void process_channel(byte_t (* in_channel)[IN_WIDTH], byte_t (* out_channel)[OUT_WIDTH]){
 	// Column worker takes new input for every new channel.
 	c.initialize(in_channel);
@@ -72,18 +90,16 @@ void process_channel(byte_t (* in_channel)[IN_WIDTH], byte_t (* out_channel)[OUT
 		stream_out(buf2, out_img_ptr);
 	}
 }
-
+/*
+ * Streaming TODO:
+ * Change the input and output types to an array of streams
+ * Setup some adapters to convert the
+ */
 
 void lanczos(
-    byte_t in_img[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
-    byte_t out_img[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
+    byte_t in_img[IN_HEIGHT][IN_WIDTH],
+    byte_t out_img[OUT_HEIGHT][OUT_WIDTH]
 ) {
-#pragma HLS INTERFACE axis register both port=in_img
-#pragma HLS INTERFACE axis register both port=out_img
 	// Perform column lengthening first, then row lengthening
-
-	colourChannels:
-	for (int chan=0; chan< NUM_CHANNELS; chan++){
-		process_channel(in_img[chan], out_img[chan]);
-	}
+	process_channel(in_img, out_img);
 }
