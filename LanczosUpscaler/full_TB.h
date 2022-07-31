@@ -7,6 +7,10 @@
 #include "lanczos.h"
 #include <math.h>
 
+// STREAM TODO
+#include "hls_stream.h"
+
+
 #include "stb_image/stb_image.h"
 #include "stb_image/stb_image_write.h"
 
@@ -18,6 +22,9 @@ byte img_out_ex[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH];
 
 byte_t  img_in_ob[IN_HEIGHT][IN_WIDTH];
 byte_t  img_out_ob[OUT_HEIGHT][OUT_WIDTH];
+// STREAM TODO
+hls::stream<byte_t> streamin;
+hls::stream<byte_t> streamout;
 
 rgb_pixel_t img_interlaced_out_ex[OUT_HEIGHT * OUT_WIDTH];
 rgb_pixel_t img_interlaced_out_ob[OUT_HEIGHT * OUT_WIDTH];
@@ -120,31 +127,43 @@ int sim_tb(int argc, char* argv[]) {
     for (int i = 0; i < IN_WIDTH * IN_HEIGHT; i++) {
         int row = i / IN_WIDTH;
         int col = i % IN_WIDTH;
+        byte_t pixel;
         for (int j = 0; j < NUM_CHANNELS; j++) {
             img_in[j][row][col] = img[i].channel[j];
-            img_in_ob[row][col].write(j, img[i].channel[j]);
+//            img_in_ob[row][col].write(j, img[i].channel[j]);
+            // STREAM TODO
+            pixel.write(j, img[i].channel[j]);
         }
+        streamin.write(pixel);
     }
 
     // apply lanczos
-    lanczos(img_in_ob,img_out_ob);
+
+//    lanczos(img_in_ob,img_out_ob);
+    // STREAM TODO
+    lanczos(streamin, streamout);
     printf("hello\n");
     lanczos_expected(img_in, img_out_ex);
+
 
     printf("hi\n");
     double err = 0;
     // copy image data back
+    byte_t r_pixel;
     for (int i = 0; i < OUT_WIDTH * OUT_HEIGHT; i++) {
         int row = i / OUT_WIDTH;
         int col = i % OUT_WIDTH;
 
         rgb_pixel_t pixel_ex = {};
         rgb_pixel_t pixel_ob = {};
-
+        // STREAM TODO
+        streamout.read(r_pixel);
         for (int j = 0; j < NUM_CHANNELS; j++) {
 
         	pixel_ex.channel[j] = img_out_ex[j][row][col];
-        	pixel_ob.channel[j] = img_out_ob[row][col][j];
+        	pixel_ob.channel[j] = r_pixel[j];
+        	// STREAM TODO
+        	//streamout.read(pixel_ob.channel[j];
             int diff = (int) pixel_ex.channel[j]- (int) pixel_ob.channel[j];
             err += diff*diff;
         }

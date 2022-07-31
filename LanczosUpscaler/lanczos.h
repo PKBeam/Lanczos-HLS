@@ -39,6 +39,9 @@ using namespace std;
 #include <stdio.h>
 #include "params.h"
 
+#include "hls_stream.h"
+
+
 #ifndef GET_BITS_COMPUTATION
 #define GET_BITS_COMPUTATION
 #define GET_BITS_INPUT_1 (OUT_WIDTH + 2*LANCZOS_A*SCALE_N/SCALE_D)
@@ -151,9 +154,14 @@ static const int SCALE_GCD = gcd(OUT_WIDTH, IN_WIDTH);
 #define SCALE_INT (OUT_WIDTH/IN_WIDTH)
 #define SCALE_IS_INT (OUT_WIDTH % IN_WIDTH == 0)
 
+//void lanczos(
+//	byte_t in_img[IN_HEIGHT][IN_WIDTH],
+//	byte_t out_img[OUT_HEIGHT][OUT_WIDTH]
+//);
+
 void lanczos(
-	byte_t in_img[IN_HEIGHT][IN_WIDTH],
-	byte_t out_img[OUT_HEIGHT][OUT_WIDTH]
+    hls::stream<byte_t> &streamin,
+    hls::stream<byte_t> &streamout
 );
 
 #endif /* lanczos_h */

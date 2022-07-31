@@ -1,5 +1,10 @@
 #include "lanczos.h"
 #include "cyclic_buffer/cyclic_buffer.h"
+
+// STREAM TODO
+#include "hls_stream.h"
+
+
 #ifndef WORKER_H
 #define WORKER_H
 // worker usage be like:
@@ -151,9 +156,12 @@ public:
 	col_major_counter_t out_idx = 0;
 
     ColWorkers(col_major_counter_t offset);
-    void exec(byte_t[IN_HEIGHT][IN_WIDTH], kernel_t[2*LANCZOS_A], num_t[IN_WIDTH][ROW_WORKERS]);
-    void step_input(byte_t[IN_HEIGHT][IN_WIDTH]);
-    void initialize(byte_t[IN_HEIGHT][IN_WIDTH]);
+//    void exec(byte_t[IN_HEIGHT][IN_WIDTH], kernel_t[2*LANCZOS_A], num_t[IN_WIDTH][ROW_WORKERS]);
+//    void step_input(byte_t[IN_HEIGHT][IN_WIDTH]);
+//    void initialize(byte_t[IN_HEIGHT][IN_WIDTH]);
+    void exec(hls::stream<byte_t> &in_img, kernel_t[2*LANCZOS_A], num_t[IN_WIDTH][ROW_WORKERS]);
+    void step_input(hls::stream<byte_t> &input);
+    void initialize(hls::stream<byte_t> &input);
     // out pos and write index are different: write index is the pointer offset. Out pos is the position of the
     // pixel being written to after the input image is upscaled by SCALE.
     void seek_write_index(col_major_counter_t idx);
