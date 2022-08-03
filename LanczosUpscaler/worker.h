@@ -156,12 +156,12 @@ public:
 	col_major_counter_t out_idx = 0;
 
     ColWorkers(col_major_counter_t offset);
-//    void exec(byte_t[IN_HEIGHT][IN_WIDTH], kernel_t[2*LANCZOS_A], num_t[IN_WIDTH][ROW_WORKERS]);
+//    void exec(byte_t[IN_HEIGHT][IN_WIDTH], kernel_t[2*LANCZOS_A], num_t[IN_WIDTH]);
 //    void step_input(byte_t[IN_HEIGHT][IN_WIDTH]);
 //    void initialize(byte_t[IN_HEIGHT][IN_WIDTH]);
-    void exec(hls::stream<byte_t> &in_img, kernel_t[2*LANCZOS_A], num_t[IN_WIDTH][ROW_WORKERS]);
-    void step_input(hls::stream<byte_t> &input);
-    void initialize(hls::stream<byte_t> &input);
+    void exec(stream_t in_img, kernel_t[2*LANCZOS_A], num_t[IN_WIDTH]);
+    void step_input(stream_t input);
+    void initialize(stream_t input);
     // out pos and write index are different: write index is the pointer offset. Out pos is the position of the
     // pixel being written to after the input image is upscaled by SCALE.
     void seek_write_index(col_major_counter_t idx);
@@ -177,8 +177,8 @@ public:
     row_major_counter_t  curr_offset;
 
     // One buffer per input row, each buffer is 2A in width
-	num_t input_buffers[ROW_WORKERS][LANCZOS_A*2];
-//	CyclicBuffer<num_t, ap_uint<2>, LANCZOS_A*2> input_buffers[ROW_WORKERS];
+	num_t input_buffers[LANCZOS_A*2];
+//	CyclicBuffer<num_t, ap_uint<2>, LANCZOS_A*2> input_buffers;
 
 	// internally maintained counters. Treat these as read only!!
     // Note:
@@ -196,9 +196,9 @@ public:
 
     // Control logic to stop executing will be provided externally.
     RowWorkers(row_major_counter_t offset);
-    void exec(num_t[IN_WIDTH][ROW_WORKERS], kernel_t[2*LANCZOS_A], byte_t[ROW_WORKERS][OUT_WIDTH]);
-    void step_input(num_t[IN_WIDTH][ROW_WORKERS]);
-    void initialize(num_t[IN_WIDTH][ROW_WORKERS]);
+    void exec(num_t[IN_WIDTH], kernel_t[2*LANCZOS_A], byte_t[OUT_WIDTH]);
+    void step_input(num_t[IN_WIDTH]);
+    void initialize(num_t[IN_WIDTH]);
     // out pos and write index are different: write index is the pointer offset. Out pos is the position of the
     // pixel being written to after the input image is upscaled by SCALE.
     void seek_write_index(row_major_counter_t idx);

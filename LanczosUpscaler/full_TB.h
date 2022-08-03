@@ -22,9 +22,6 @@ byte img_out_ex[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH];
 
 byte_t  img_in_ob[IN_HEIGHT][IN_WIDTH];
 byte_t  img_out_ob[OUT_HEIGHT][OUT_WIDTH];
-// STREAM TODO
-hls::stream<byte_t> streamin;
-hls::stream<byte_t> streamout;
 
 rgb_pixel_t img_interlaced_out_ex[OUT_HEIGHT * OUT_WIDTH];
 rgb_pixel_t img_interlaced_out_ob[OUT_HEIGHT * OUT_WIDTH];
@@ -105,6 +102,9 @@ int sim_tb(int argc, char* argv[]) {
     int height;
     int channels;
 
+    // STREAM TODO
+    hls::stream<byte_t> stream_in;
+    hls::stream<byte_t> stream_out;
     rgb_pixel_t* img = (rgb_pixel_t*) stbi_load(OUT_DIR IN_IMG, &width, &height, &channels, NUM_CHANNELS);
 
     // error checking
@@ -132,21 +132,14 @@ int sim_tb(int argc, char* argv[]) {
             img_in[j][row][col] = img[i].channel[j];
 //            img_in_ob[row][col].write(j, img[i].channel[j]);
             // STREAM TODO
-            pixel.write(j, img[i].channel[j]);
+            pixel.ch[j]= img[i].channel[j];
         }
-        streamin.write(pixel);
+        stream_in.write(pixel);
     }
 
-    // apply lanczos
-
-//    lanczos(img_in_ob,img_out_ob);
-    // STREAM TODO
-    lanczos(streamin, streamout);
-    printf("hello\n");
+    lanczos(stream_in, stream_out);
     lanczos_expected(img_in, img_out_ex);
 
-
-    printf("hi\n");
     double err = 0;
     // copy image data back
     byte_t r_pixel;
@@ -157,13 +150,13 @@ int sim_tb(int argc, char* argv[]) {
         rgb_pixel_t pixel_ex = {};
         rgb_pixel_t pixel_ob = {};
         // STREAM TODO
-        streamout.read(r_pixel);
+        stream_out.read(r_pixel);
         for (int j = 0; j < NUM_CHANNELS; j++) {
 
         	pixel_ex.channel[j] = img_out_ex[j][row][col];
-        	pixel_ob.channel[j] = r_pixel[j];
+        	pixel_ob.channel[j] = r_pixel.ch[j];
         	// STREAM TODO
-        	//streamout.read(pixel_ob.channel[j];
+        	//stream_out.read(pixel_ob.channel[j];
             int diff = (int) pixel_ex.channel[j]- (int) pixel_ob.channel[j];
             err += diff*diff;
         }

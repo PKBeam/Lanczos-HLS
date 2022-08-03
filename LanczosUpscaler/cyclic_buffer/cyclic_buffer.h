@@ -7,7 +7,8 @@ class CyclicBuffer {
 public:
 
 	CyclicBuffer() {
-	#pragma HLS ARRAY_PARTITION variable=__cyc_buf factor=4 dim=1
+#pragma HLS ARRAY_PARTITION variable=__cyc_buf factor=4 dim=1
+#pragma HLS ARRAY_PARTITION variable=__cyc_buf complete dim=2
 
 	}
 
@@ -39,11 +40,16 @@ public:
 		set(0, next);
 	}
 
-	item_t get(idx_t i) {
+	INLINE item_t get(idx_t i) {
+		return __cyc_buf[MIN(i + start_index, MAX_LEN-1) % N];
+	}
+
+	INLINE item_t operator [] (idx_t i) {
+
 		return __cyc_buf[MIN(i + start_index, MAX_LEN-1) % N];
 	}
 	
-	void set(idx_t i, item_t val) {
+	INLINE void set(idx_t i, item_t val) {
 		if (i + start_index < MAX_LEN-1){
 			__cyc_buf[(i + start_index) % N] = val;
 		}

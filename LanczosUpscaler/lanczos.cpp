@@ -17,24 +17,6 @@
 ColWorkers c(0);
 RowWorkers r(0);
 
-byte_el_t get_item(byte_t &x, int i){
-	return x(i*8+7, i*8);
-}
-
-
-void set_item(byte_t &x, int i, byte_el_t y){
-	x(i*8+7, i*8) = y;
-}
-
-num_el_t get_item(num_t &x, int i){
-	return x((i+1)*(INTEGER_BITS+BIT_PRECISION)-1, i*(INTEGER_BITS+BIT_PRECISION));
-}
-
-void set_item(num_t &x, int i, num_el_t y){
-	x((i+1)*(INTEGER_BITS+BIT_PRECISION)-1, i*(INTEGER_BITS+BIT_PRECISION)) = y;
-}
-
-
 //void fillColBuffer(byte_t in_img[IN_HEIGHT][IN_WIDTH], num_t (* buf)[ROW_WORKERS]){
 //	kernel_t kernel_vals[2*LANCZOS_A];
 //	c.seek_write_index(0);
@@ -50,23 +32,20 @@ void set_item(num_t &x, int i, num_el_t y){
 //}
 
 // STREAM TODO
-void fillColBuffer(hls::stream<byte_t> &in_img , num_t (* buf)[ROW_WORKERS]){
+void fillColBuffer(stream_t in_img , num_t buf[IN_WIDTH]){
 	kernel_t kernel_vals[2*LANCZOS_A];
 	c.seek_write_index(0);
-	fillColBuffer_rowWorkerWidth:
-	for (int i = 0; i < ROW_WORKERS; i++){
-		fillColBuffer_rowWorkerWidth_kernelVals:
-		for(int j = 0; j < 2*LANCZOS_A; j++){
-			#pragma HLS unroll
-			kernel_vals[j] = lanczos_kernel(c.in_idx - 2*LANCZOS_A+j, c.get_out_pos(), (scale_t)SCALE);
-		}
-		c.exec(in_img, kernel_vals, buf);
+	fillColBuffer_rowWorkerWidth_kernelVals:
+	for(int j = 0; j < 2*LANCZOS_A; j++){
+		#pragma HLS unroll
+		kernel_vals[j] = lanczos_kernel(c.in_idx - 2*LANCZOS_A+j, c.get_out_pos(), (scale_t)SCALE);
 	}
+	c.exec(in_img, kernel_vals, buf);
 }
 
 
 
-void fillRowBuffer(num_t (* buf)[ROW_WORKERS], byte_t (* out_img)[OUT_WIDTH]){
+void fillRowBuffer(num_t buf[IN_WIDTH], byte_t out_img[OUT_WIDTH]){
 	kernel_t kernel_vals[2*LANCZOS_A];
 	// row takes new input for every new buffer given to it.
 	r.initialize(buf);
@@ -96,15 +75,12 @@ void fillRowBuffer(num_t (* buf)[ROW_WORKERS], byte_t (* out_img)[OUT_WIDTH]){
 
 
 // STREAM TODO
-void stream_out(byte_t buf2[ROW_WORKERS][OUT_WIDTH], hls::stream<byte_t> &out_channel){
-	for(int i = 0; i < ROW_WORKERS; i++){
-
-		for(int j = 0; j < OUT_WIDTH; j++){
-			#pragma HLS PIPELINE
-			#pragma HLS UNROLL factor=2
-			#pragma HLS LOOP_FLATTEN off
-			out_channel.write(buf2[i][j]);
-		}
+void stream_out(byte_t buf2[OUT_WIDTH], stream_t out_channel){
+	for(int j = 0; j < OUT_WIDTH; j++){
+		#pragma HLS PIPELINE
+		#pragma HLS UNROLL factor=2
+		#pragma HLS LOOP_FLATTEN off
+		out_channel.write(buf2[j]);
 	}
 }
 
@@ -127,17 +103,16 @@ void stream_out(byte_t buf2[ROW_WORKERS][OUT_WIDTH], hls::stream<byte_t> &out_ch
 //}
 
 // STREAM TODO
-void process_channel(hls::stream<byte_t> &in_channel, hls::stream<byte_t> &out_channel){
+void process_channel(stream_t in_channel, stream_t out_channel){
 	// Column worker takes new input for every new channel.
 	c.initialize(in_channel);
 	lanczosComputeBuffers:
-	for(int i = 0; i < (OUT_HEIGHT+ROW_WORKERS-1)/ROW_WORKERS; i++){
+	for(int i = 0; i < OUT_HEIGHT; i++){
 		#pragma HLS DATAFLOW
-		num_t buf1[IN_WIDTH][ROW_WORKERS];
-		#pragma HLS ARRAY_PARTITION variable=buf1 complete dim=2
-		byte_t buf2[ROW_WORKERS][OUT_WIDTH];
-		#pragma HLS ARRAY_PARTITION variable=buf2 complete dim=1
-
+		num_t buf1[IN_WIDTH];
+#pragma HLS ARRAY_PARTITION variable=buf1 complete dim=2
+		byte_t buf2[OUT_WIDTH];
+#pragma HLS ARRAY_PARTITION variable=buf2 complete dim=2
 
 		fillColBuffer(in_channel, buf1); // byte to num_t
 		fillRowBuffer(buf1, buf2); // num_T to byte
@@ -163,9 +138,13 @@ void process_channel(hls::stream<byte_t> &in_channel, hls::stream<byte_t> &out_c
 
 // STREAM TODO
 void lanczos(
-    hls::stream<byte_t> &streamin,
-    hls::stream<byte_t> &streamout
+	stream_t streamin,
+	stream_t streamout
 ) {
+#pragma HLS STABLE variable=streamout
+#pragma HLS STABLE variable=streamin
+#pragma HLS STABLE variable=c
+#pragma HLS STABLE variable=r
 #pragma HLS INTERFACE axis register both port=streamin
 #pragma HLS INTERFACE axis register both port=streamout
 	// Perform column lengthening first, then row lengthening
