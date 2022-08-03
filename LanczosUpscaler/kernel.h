@@ -6,3 +6,4 @@ typedef float scale_t;
 kernel_t lanczos_kernel(input_idx_t, output_idx_t, scale_t);
 
 kernel_t raw_lanczos_kernel(kernel_t x);
+template <typename T> T abs_(T a) { return (a>=0? a : -a);}

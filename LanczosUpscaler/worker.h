@@ -1,4 +1,10 @@
 #include "lanczos.h"
+#include "cyclic_buffer/cyclic_buffer.h"
+
+// STREAM TODO
+#include "hls_stream.h"
+
+
 #ifndef WORKER_H
 #define WORKER_H
 // worker usage be like:
@@ -101,15 +107,15 @@ ColWorker c(N);
 BUF_READ[IN_HEIGHT][N]
 BUF_WRITE[IN_HEIGHT][N]
 
-Row workers work on input -> Buf_write
+fillBuffer(input, BUF_WRITE, r) // byte to num_t
 for(i = 0; i < ceil(OUT_WIDTH/N) - 1; i++){
 	BUF_WRITE, BUF_READ = BUF_READ, BUF_WRITE
 	// col workers work on buf_read -> row worker work on input -> BUF_WRTE
-	fillBuffer(BUF_READ, output, c)
-	fillBuffer(input, BUF_WRITE, r)
+	fillBuffer(input, BUF_WRITE, r) // byte to num_t
+	fillBuffer(BUF_READ, output, c) // num_T to byte
 }
 
-col workers work on buf_read -> output
+fillBuffer(BUF_READ, output, c) // num_T to byte
 
 fillBuffer(img, buf, proc)
 	kern = get kernel values
@@ -122,42 +128,18 @@ fillBuffer(img, buf, proc)
 
 */
 
-template <typename T, int N>
-T shift_up(T reg[N], T next){
-    T out = reg[N-1];
-    for (int k = N-1; k > 0; k--) reg[k] = reg[k-1];
-    reg[0] = next;
-    return out;
-}
 
+typedef CyclicBuffer<byte_t, int, LANCZOS_A*2, IN_HEIGHT + LANCZOS_A-1> cyclic_buffer_t;
 
-template <typename T, int N>
-T shift_down(T reg[N], T next){
-    T out = reg[0];
-    for (int k = 0; k < N-1; k++) reg[k] = reg[k+1];
-    reg[N-1] = next;
-    return out;
-}
-
-template <typename IN_T>
-num_t compute(IN_T in[2*LANCZOS_A], kernel_t kern[2*LANCZOS_A]){
-    num_t out = 0;
-    for(int i = 0; i < 2*LANCZOS_A; i++){
-	#pragma HLS UNROLL
-    	out += kern[i]*in[i];
-    }
-    return out;
-}
-
-class RowWorker{
+class ColWorkers{
 public:
 	// offset = 0 when first out_idx is at the first pixel of the image.
 	// want that in_idx - 1 < (out_idx-offset)/scale + LANCZOS_A <= in_idx  upon calculation
-    const int offset;
-
+	const col_major_counter_t offset;
+	col_major_counter_t curr_offset;
     // One buffer per input row, each buffer is23 2A in width
-	byte_t input_buffers[IN_HEIGHT][LANCZOS_A*2];
-
+	//byte_t input_buffers[IN_WIDTH][LANCZOS_A*2];
+	cyclic_buffer_t input_buffers[IN_WIDTH];
 
     // internally maintained counters. Treat these as read only!!
     // Note:
@@ -170,24 +152,33 @@ public:
     // So we want out_idx/scale <= in_idx - offset.
     // This constraint translates to out_idx*scale_D <= (in_idx - offset)*scale_N
 
-    int in_idx = 0;
-    int out_idx = 0;
-    RowWorker
-    RowWorker(int offset);
-    void exec(byte_t[IN_HEIGHT][IN_WIDTH], kernel_t[2*LANCZOS_A], num_t[OUT_WIDTH][IN_HEIGHT]);
-    void step_input(byte_t[IN_HEIGHT][IN_WIDTH]);
-    void initialize(byte_t[IN_HEIGHT][IN_WIDTH]);
+	col_major_counter_t in_idx = 0;
+	col_major_counter_t out_idx = 0;
+
+    ColWorkers(col_major_counter_t offset);
+//    void exec(byte_t[IN_HEIGHT][IN_WIDTH], kernel_t[2*LANCZOS_A], num_t[IN_WIDTH][ROW_WORKERS]);
+//    void step_input(byte_t[IN_HEIGHT][IN_WIDTH]);
+//    void initialize(byte_t[IN_HEIGHT][IN_WIDTH]);
+    void exec(hls::stream<byte_t> &in_img, kernel_t[2*LANCZOS_A], num_t[IN_WIDTH][ROW_WORKERS]);
+    void step_input(hls::stream<byte_t> &input);
+    void initialize(hls::stream<byte_t> &input);
+    // out pos and write index are different: write index is the pointer offset. Out pos is the position of the
+    // pixel being written to after the input image is upscaled by SCALE.
+    void seek_write_index(col_major_counter_t idx);
+    col_major_counter_t get_out_pos();
 
 };
 
-class ColWorker{
+class RowWorkers{
 public:
 	// How many empty inputs there are upon initialize.
 	// This translates to how shifted the image is after we perform the operation.
-    const int offset;
+    const row_major_counter_t  offset;
+    row_major_counter_t  curr_offset;
 
     // One buffer per input row, each buffer is 2A in width
-	num_t input_buffers[OUT_WIDTH][LANCZOS_A*2];
+	num_t input_buffers[ROW_WORKERS][LANCZOS_A*2];
+//	CyclicBuffer<num_t, ap_uint<2>, LANCZOS_A*2> input_buffers[ROW_WORKERS];
 
 	// internally maintained counters. Treat these as read only!!
     // Note:
@@ -200,14 +191,18 @@ public:
     // So we want out_idx/scale <= in_idx - offset.
     // This constraint translates to out_idx*scale_D <= (in_idx - offset)*scale_N
 
-    int in_idx = 0;
-    int out_idx = 0;
+	row_major_counter_t in_idx = 0;
+	row_major_counter_t out_idx = 0;
 
     // Control logic to stop executing will be provided externally.
-    ColWorker(int offset);
-    void exec(num_t[OUT_WIDTH][IN_HEIGHT], kernel_t[2*LANCZOS_A], byte_t[OUT_HEIGHT][OUT_WIDTH]);
-    void step_input(num_t[OUT_WIDTH][IN_HEIGHT]);
-    void initialize(num_t[OUT_WIDTH][IN_HEIGHT]);
+    RowWorkers(row_major_counter_t offset);
+    void exec(num_t[IN_WIDTH][ROW_WORKERS], kernel_t[2*LANCZOS_A], byte_t[ROW_WORKERS][OUT_WIDTH]);
+    void step_input(num_t[IN_WIDTH][ROW_WORKERS]);
+    void initialize(num_t[IN_WIDTH][ROW_WORKERS]);
+    // out pos and write index are different: write index is the pointer offset. Out pos is the position of the
+    // pixel being written to after the input image is upscaled by SCALE.
+    void seek_write_index(row_major_counter_t idx);
+    row_major_counter_t get_out_pos();
 };
 
 #endif

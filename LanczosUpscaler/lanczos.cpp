@@ -5,83 +5,169 @@
 //  Created by Vincent Liu on 18/6/2022.
 //
 
+#include "math.h"
 #include "lanczos.h"
 #include "worker.h"
 #include "kernel.h"
 //#include "hls_math.h"
 
-void lanczos(
-    byte_t img_input[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
-    byte_t img_output[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
-) {
-//	kernel_t kernel_vals[4] = {0.25, 0.25, 0.25, 0.25};
-	RowWorker r_worker(0);
-	ColWorker c_worker(0);
-	for (int chan=0; chan< NUM_CHANNELS; chan++){
-		// refreshes buffers and resets counters
-		r_worker.initialize(img_input[chan]);
-		for(int i = 0; i < OUT_WIDTH; i++){
-			// get kernel values
-			kernel_t kernel_vals[2*LANCZOS_A];
+// STREAM TODO
+#include "hls_stream.h"
 
-			for(int j=0; j < 2*LANCZOS_A; j++){
-				kernel_vals[j] = lanczos_kernel(r_worker.in_idx -2*LANCZOS_A+j, r_worker.out_idx - r_worker.offset, (scale_t)SCALE);
-			}
+ColWorkers c(0);
+RowWorkers r(0);
 
-			r_worker.exec(img_input[chan], kernel_vals, img_processed_rows[chan]);
+byte_el_t get_item(byte_t &x, int i){
+	return x(i*8+7, i*8);
+}
+
+
+void set_item(byte_t &x, int i, byte_el_t y){
+	x(i*8+7, i*8) = y;
+}
+
+num_el_t get_item(num_t &x, int i){
+	return x((i+1)*(INTEGER_BITS+BIT_PRECISION)-1, i*(INTEGER_BITS+BIT_PRECISION));
+}
+
+void set_item(num_t &x, int i, num_el_t y){
+	x((i+1)*(INTEGER_BITS+BIT_PRECISION)-1, i*(INTEGER_BITS+BIT_PRECISION)) = y;
+}
+
+
+//void fillColBuffer(byte_t in_img[IN_HEIGHT][IN_WIDTH], num_t (* buf)[ROW_WORKERS]){
+//	kernel_t kernel_vals[2*LANCZOS_A];
+//	c.seek_write_index(0);
+//	fillColBuffer_rowWorkerWidth:
+//	for (int i = 0; i < ROW_WORKERS; i++){
+//		fillColBuffer_rowWorkerWidth_kernelVals:
+//		for(int j = 0; j < 2*LANCZOS_A; j++){
+//			#pragma HLS unroll
+//			kernel_vals[j] = lanczos_kernel(c.in_idx - 2*LANCZOS_A+j, c.get_out_pos(), (scale_t)SCALE);
+//		}
+//		c.exec(in_img, kernel_vals, buf);
+//	}
+//}
+
+// STREAM TODO
+void fillColBuffer(hls::stream<byte_t> &in_img , num_t (* buf)[ROW_WORKERS]){
+	kernel_t kernel_vals[2*LANCZOS_A];
+	c.seek_write_index(0);
+	fillColBuffer_rowWorkerWidth:
+	for (int i = 0; i < ROW_WORKERS; i++){
+		fillColBuffer_rowWorkerWidth_kernelVals:
+		for(int j = 0; j < 2*LANCZOS_A; j++){
+			#pragma HLS unroll
+			kernel_vals[j] = lanczos_kernel(c.in_idx - 2*LANCZOS_A+j, c.get_out_pos(), (scale_t)SCALE);
 		}
+		c.exec(in_img, kernel_vals, buf);
+	}
+}
 
-		// refreshes buffers and resets counters
-		c_worker.initialize(img_processed_rows[chan]);
-		for(int i = 0; i < OUT_HEIGHT; i++){
-			// get kernel values
-			kernel_t kernel_vals[2*LANCZOS_A];
 
-			for(int j=0; j < 2*LANCZOS_A; j++){
 
-				kernel_vals[j] = lanczos_kernel(c_worker.in_idx - 2*LANCZOS_A+j, c_worker.out_idx - c_worker.offset, (scale_t)SCALE);
-			}
+void fillRowBuffer(num_t (* buf)[ROW_WORKERS], byte_t (* out_img)[OUT_WIDTH]){
+	kernel_t kernel_vals[2*LANCZOS_A];
+	// row takes new input for every new buffer given to it.
+	r.initialize(buf);
+	fillRowBuffer_outWidth:
+	for (int i = 0; i < OUT_WIDTH; i++){
+		#pragma HLS PIPELINE
+		fillRowBuffer_outWidth_kernelVals:
+		for(int j = 0; j < 2*LANCZOS_A; j++){
+			#pragma HLS unroll
+			kernel_vals[j] = lanczos_kernel(r.in_idx - 2*LANCZOS_A+j, r.get_out_pos(), (scale_t)SCALE);
+		}
+		r.exec(buf, kernel_vals, out_img);
+	}
+}
 
-			c_worker.exec(img_processed_rows[chan], kernel_vals, img_output[chan]);
+//void stream_out(byte_t buf2[ROW_WORKERS][OUT_WIDTH], byte_t (* out_channel)[OUT_WIDTH]){
+//	for(int i = 0; i < ROW_WORKERS; i++){
+//
+//		for(int j = 0; j < OUT_WIDTH; j++){
+//			#pragma HLS PIPELINE
+//			#pragma HLS UNROLL factor=2
+//			#pragma HLS LOOP_FLATTEN off
+//			out_channel[i][j] = buf2[i][j];
+//		}
+//	}
+//}
+
+
+// STREAM TODO
+void stream_out(byte_t buf2[ROW_WORKERS][OUT_WIDTH], hls::stream<byte_t> &out_channel){
+	for(int i = 0; i < ROW_WORKERS; i++){
+
+		for(int j = 0; j < OUT_WIDTH; j++){
+			#pragma HLS PIPELINE
+			#pragma HLS UNROLL factor=2
+			#pragma HLS LOOP_FLATTEN off
+			out_channel.write(buf2[i][j]);
 		}
 	}
 }
 
-/* old implementation
- *
-void lanczos(
-    byte_t img_input[NUM_CHANNELS][IN_HEIGHT][IN_WIDTH],
-    byte_t img_output[NUM_CHANNELS][OUT_HEIGHT][OUT_WIDTH]
-) {
-	num_t img_processed_rows[NUM_CHANNELS][IN_HEIGHT][OUT_WIDTH];
-    for (int j = 0; j < NUM_CHANNELS; j++) {
-    	for (int i = 0; i < IN_HEIGHT; i++) {
-			for (int xx = 0; xx < OUT_WIDTH; xx++) {
-				int floorx = (SCALE_D * xx) / SCALE_N;
-				num_t sum = 0;
-				for (int k = 1 - LANCZOS_A; k <= LANCZOS_A; k++){
-					int kk = k + floorx;
-					if (kk >= 0 && kk < IN_WIDTH){
-						sum += img_input[j][i][kk] * lanczos_kernel((kernel_in_t)((num_t)(xx*SCALE_D-kk*SCALE_N)/SCALE_N));
-					}
-                }
-				img_processed_rows[j][i][xx] = sum;
-			}
-		}
-		for (int i = 0; i < OUT_WIDTH; i++) {
-            for (int xx = 0; xx < OUT_HEIGHT; xx++) {
-				int floorx = (SCALE_D * xx) / SCALE_N;
-            	num_t sum = 0;
-				for (int k = 1 - LANCZOS_A; k <= LANCZOS_A; k++){
-					int kk = k + floorx;
-					if (kk >= 0 && kk < IN_HEIGHT){
-						sum += img_processed_rows[j][kk][i] * lanczos_kernel((kernel_in_t)((num_t)(xx*SCALE_D-kk*SCALE_N)/SCALE_N));
-					}
-                }
-				img_output[j][xx][i] = clamp_to_byte(sum);
-            }
-        }
-    }
-    return;
+
+//void process_channel(byte_t (* in_channel)[IN_WIDTH], byte_t (* out_channel)[OUT_WIDTH]){
+//	// Column worker takes new input for every new channel.
+//	c.initialize(in_channel);
+//	lanczosComputeBuffers:
+//	for(int i = 0; i < (OUT_HEIGHT+ROW_WORKERS-1)/ROW_WORKERS; i++){
+//		#pragma HLS DATAFLOW
+//		num_t buf1[IN_WIDTH][ROW_WORKERS];
+//		#pragma HLS ARRAY_PARTITION variable=buf1 complete dim=2
+//		byte_t buf2[ROW_WORKERS][OUT_WIDTH];
+//		#pragma HLS ARRAY_PARTITION variable=buf2 complete dim=1
+//		byte_t (* out_img_ptr)[OUT_WIDTH] = out_channel + ROW_WORKERS*i;
+//		fillColBuffer(in_channel, buf1); // byte to num_t
+//		fillRowBuffer(buf1, buf2); // num_T to byte
+//		stream_out(buf2, out_img_ptr);
+//	}
+//}
+
+// STREAM TODO
+void process_channel(hls::stream<byte_t> &in_channel, hls::stream<byte_t> &out_channel){
+	// Column worker takes new input for every new channel.
+	c.initialize(in_channel);
+	lanczosComputeBuffers:
+	for(int i = 0; i < (OUT_HEIGHT+ROW_WORKERS-1)/ROW_WORKERS; i++){
+		#pragma HLS DATAFLOW
+		num_t buf1[IN_WIDTH][ROW_WORKERS];
+		#pragma HLS ARRAY_PARTITION variable=buf1 complete dim=2
+		byte_t buf2[ROW_WORKERS][OUT_WIDTH];
+		#pragma HLS ARRAY_PARTITION variable=buf2 complete dim=1
+
+
+		fillColBuffer(in_channel, buf1); // byte to num_t
+		fillRowBuffer(buf1, buf2); // num_T to byte
+		stream_out(buf2, out_channel);
+	}
 }
-*/
+
+
+
+/*
+ * Streaming TODO:
+ * Change the input and output types to an array of streams
+ * Setup some adapters to convert the
+ */
+
+//void lanczos(
+//    byte_t in_img[IN_HEIGHT][IN_WIDTH],
+//    byte_t out_img[OUT_HEIGHT][OUT_WIDTH]
+//) {
+//	// Perform column lengthening first, then row lengthening
+//	process_channel(in_img, out_img);
+//}
+
+// STREAM TODO
+void lanczos(
+    hls::stream<byte_t> &streamin,
+    hls::stream<byte_t> &streamout
+) {
+#pragma HLS INTERFACE axis register both port=streamin
+#pragma HLS INTERFACE axis register both port=streamout
+	// Perform column lengthening first, then row lengthening
+	process_channel(streamin, streamout);
+}
