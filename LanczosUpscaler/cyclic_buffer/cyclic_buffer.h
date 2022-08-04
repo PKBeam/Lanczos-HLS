@@ -50,7 +50,7 @@ public:
 	}
 	
 	INLINE void set(idx_t i, item_t val) {
-		if (i + start_index < MAX_LEN-1){
+		if (i + start_index < MAX_LEN){
 			__cyc_buf[(i + start_index) % N] = val;
 		}
 	}

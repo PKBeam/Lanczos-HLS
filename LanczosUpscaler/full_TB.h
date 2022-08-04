@@ -37,8 +37,16 @@ byte double_to_uint8(double x) {
 }
 
 double sinc(double x) {
+	if (x==0){
+		return 1;
+	}
     return sin(x)/x;
 }
+
+#define _S1(a) #a
+#define _S(a) _S1(a)
+
+#define TEST_ID _S(IN_WIDTH) "x" _S(IN_HEIGHT) "-" _S(OUT_WIDTH) "x" _S(OUT_HEIGHT) "-" _S(SCALE_N) "|" _S(SCALE_D) "-"
 
 double lanczos_kernel(double x) {
     return sinc(M_PI * x) * sinc(M_PI * x / LANCZOS_A);
@@ -46,12 +54,7 @@ double lanczos_kernel(double x) {
 
 void lanczos_interpolate_row(byte in[IN_WIDTH], byte out[OUT_WIDTH]) {
     for (int xx = 0; xx < OUT_WIDTH; xx++) {
-        if (SCALE_IS_INT && xx % SCALE_INT == 0) {
-            out[xx] = in[xx / SCALE_INT];
-            continue;
-        }
         double x = (double) xx / SCALE;
-
         double sum = 0;
         for (int i = MAX(0, floor(x) - LANCZOS_A + 1); i <= MIN(IN_WIDTH - 1, floor(x) + LANCZOS_A); i++) {
             sum += in[i] * lanczos_kernel(x - i);
@@ -64,10 +67,6 @@ void lanczos_interpolate_row(byte in[IN_WIDTH], byte out[OUT_WIDTH]) {
 void lanczos_interpolate_col(byte img[OUT_HEIGHT][OUT_WIDTH], int col) {
     // start filling from largest height first so we don't overwrite any pixels we're using
     for (int xx = OUT_HEIGHT - 1; xx >= 0; xx--) {
-        if (SCALE_IS_INT && xx % SCALE_INT == 0) {
-            img[xx][col] = img[xx / SCALE_INT][col];
-            continue;
-        }
         double x = (double) xx / SCALE;
         double sum = 0;
         for (int i = MAX(0, floor(x) - LANCZOS_A + 1); i <= MIN(IN_HEIGHT - 1, floor(x) + LANCZOS_A); i++) {
@@ -122,6 +121,7 @@ int sim_tb(int argc, char* argv[]) {
         printf("Image has wrong amount of channels (expected %i, got %i).\n", NUM_CHANNELS, channels);
         return EXIT_FAILURE;
     }
+    printf("Scale:%d/%d, WIDTHS %d -> %d\n",SCALE_N, SCALE_D, IN_WIDTH, OUT_WIDTH);
 
     // read image data
     for (int i = 0; i < IN_WIDTH * IN_HEIGHT; i++) {
@@ -164,9 +164,17 @@ int sim_tb(int argc, char* argv[]) {
         img_interlaced_out_ob[i] = pixel_ob;
     }
     printf("RMS err: %.3f\n", sqrt((double)err/(NUM_CHANNELS*OUT_WIDTH*OUT_HEIGHT)));
+    char str[100];
+
+
+    sprintf(str, OUT_DIR "%dx%d->%dx%d_%d|%d_%d-" OUT_IMG_EX, IN_WIDTH,IN_HEIGHT,OUT_WIDTH,OUT_HEIGHT,SCALE_N, SCALE_D, LANCZOS_A);
     // save data to both observed and expected
-    stbi_write_png(OUT_DIR OUT_IMG_EX, OUT_WIDTH, OUT_HEIGHT, NUM_CHANNELS, img_interlaced_out_ex, OUT_WIDTH * NUM_CHANNELS);
-    stbi_write_png(OUT_DIR OUT_IMG_OB, OUT_WIDTH, OUT_HEIGHT, NUM_CHANNELS, img_interlaced_out_ob, OUT_WIDTH * NUM_CHANNELS);
+    stbi_write_png(str, OUT_WIDTH, OUT_HEIGHT, NUM_CHANNELS, img_interlaced_out_ex, OUT_WIDTH * NUM_CHANNELS);
+
+
+    sprintf(str, OUT_DIR "%dx%d->%dx%d_%d|%d_%d-" OUT_IMG_OB, IN_WIDTH,IN_HEIGHT,OUT_WIDTH,OUT_HEIGHT,SCALE_N, SCALE_D,LANCZOS_A);
+
+    stbi_write_png(str, OUT_WIDTH, OUT_HEIGHT, NUM_CHANNELS, img_interlaced_out_ob, OUT_WIDTH * NUM_CHANNELS);
 
     return 0;
 }

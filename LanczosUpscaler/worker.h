@@ -156,9 +156,6 @@ public:
 	col_major_counter_t out_idx = 0;
 
     ColWorkers(col_major_counter_t offset);
-//    void exec(byte_t[IN_HEIGHT][IN_WIDTH], kernel_t[2*LANCZOS_A], num_t[IN_WIDTH]);
-//    void step_input(byte_t[IN_HEIGHT][IN_WIDTH]);
-//    void initialize(byte_t[IN_HEIGHT][IN_WIDTH]);
     void exec(stream_t in_img, kernel_t[2*LANCZOS_A], num_t[IN_WIDTH]);
     void step_input(stream_t input);
     void initialize(stream_t input);
@@ -207,72 +204,4 @@ public:
 
 #endif
 
-
-
-// Template implementation for reference
-//template <typename IN_T, typename OUT_T, int N, int IN_LEN, int OUT_LEN, int OFFSET>
-//class Proc {
-//public:
-//
-//    // One buffer per input row, each buffer is 2A in width
-//	IN_T input_buffers[N][LANCZOS_A*2];
-//
-//    // internally maintained counters. Treat these as read only!!
-//    // Note:
-//    // in_idx is the NEXT index to read from.
-//    // out_idx is the NEXT index to write to.
-//    //
-//    // Because out_idx requires entries ahead to be read, the correspoinding position
-//    // in the input image that out_idx corresponds to is actually in the interval (in_idx - OFFSET - 1, in_idx - OFFSET]
-//    //
-//    // So we want out_idx/scale <= in_idx - OFFSET.
-//    // This constraint translates to out_idx*scale_D <= (in_idx - OFFSET)*scale_N
-//
-//    int in_idx = 0;
-//    int out_idx = 0;
-//
-//    // Control logic to stop executing will be provided externally.
-//
-//    void exec(IN_T[N][IN_LEN], kernel_t[2*LANCZOS_A], OUT_T[OUT_LEN][N]);
-//    void step_input(IN_T[N][IN_LEN]);
-//    void initialize(IN_T[N][IN_LEN]);
-//};
-//template <typename IN_T, typename OUT_T, int N, int IN_LEN, int OUT_LEN, int OFFSET>
-//void Proc<IN_T, OUT_T, N, IN_LEN, OUT_LEN, OFFSET>::exec(IN_T input[N][IN_LEN], kernel_t kern_vals[2*LANCZOS_A], OUT_T output[OUT_LEN][N]){
-//
-//	#pragma HLS ARRAY_PARTITION variable=p.input_buffers cyclic factor=2 dim=1
-//	#pragma HLS ARRAY_PARTITION variable=p.input_buffers complete dim=2
-//
-//	#pragma HLS PIPELINE
-//	compute_loop:
-//    for(int i = 0; i < N; i++){
-//		#pragma HLS UNROLL complete
-//        output[out_idx][i] = compute<IN_T>(input_buffers[i], kern_vals);
-//    }
-//    out_idx++;
-//    if (out_idx*SCALE_D >= (in_idx + OFFSET - LANCZOS_A-1)*SCALE_N) step_input(input);
-//}
-//
-//template <typename IN_T, typename OUT_T, int N, int IN_LEN, int OUT_LEN, int OFFSET>
-//void Proc<IN_T, OUT_T, N, IN_LEN, OUT_LEN, OFFSET>::step_input(IN_T input[N][IN_LEN]){
-//    for(int i = 0; i < N; i++){
-//		#pragma HLS UNROLL complete
-//        shift_up<IN_T, 2*LANCZOS_A>(input_buffers[i], in_idx >= IN_LEN? (IN_T) 0 : input[i][in_idx]);
-//    }
-//    in_idx++;
-//}
-//
-//template <typename IN_T, typename OUT_T, int N, int IN_LEN, int OUT_LEN, int OFFSET>
-//void Proc<IN_T, OUT_T, N, IN_LEN, OUT_LEN, OFFSET>::initialize(IN_T input[N][IN_LEN]){
-//    // clear and initialize buffer with first few values of input
-//    out_idx = 0;
-//    int j = LANCZOS_A*2-1;
-//    for (in_idx = -OFFSET; in_idx < LANCZOS_A*2 - OFFSET; in_idx++){
-//        for(int i = 0; i < N; i++){
-//            #pragma HLS UNROLL complete
-//            input_buffers[i][j] =  in_idx < 0 ? (IN_T) 0 :input[i][in_idx];
-//        }
-//        j--;
-//    }
-//}
 
