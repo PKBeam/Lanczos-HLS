@@ -104,7 +104,7 @@ int sim_tb(int argc, char* argv[]) {
     // STREAM TODO
     hls::stream<byte_t> stream_in;
     hls::stream<byte_t> stream_out;
-    rgb_pixel_t* img = (rgb_pixel_t*) stbi_load(OUT_DIR IN_IMG, &width, &height, &channels, NUM_CHANNELS);
+    rgb_pixel_t* img = (rgb_pixel_t*) stbi_load(IN_DIR IN_IMG, &width, &height, &channels, NUM_CHANNELS);
 
     // error checking
     if (img == NULL) {
@@ -127,12 +127,12 @@ int sim_tb(int argc, char* argv[]) {
     for (int i = 0; i < IN_WIDTH * IN_HEIGHT; i++) {
         int row = i / IN_WIDTH;
         int col = i % IN_WIDTH;
-        byte_t pixel;
+        byte_t pixel = pack_blob(img[i].channel);
         for (int j = 0; j < NUM_CHANNELS; j++) {
             img_in[j][row][col] = img[i].channel[j];
 //            img_in_ob[row][col].write(j, img[i].channel[j]);
             // STREAM TODO
-            pixel.ch[j]= img[i].channel[j];
+
         }
         stream_in.write(pixel);
     }
@@ -151,10 +151,10 @@ int sim_tb(int argc, char* argv[]) {
         rgb_pixel_t pixel_ob = {};
         // STREAM TODO
         stream_out.read(r_pixel);
+    	unpack_blob(r_pixel, pixel_ob.channel);
         for (int j = 0; j < NUM_CHANNELS; j++) {
 
         	pixel_ex.channel[j] = img_out_ex[j][row][col];
-        	pixel_ob.channel[j] = r_pixel.ch[j];
         	// STREAM TODO
         	//stream_out.read(pixel_ob.channel[j];
             int diff = (int) pixel_ex.channel[j]- (int) pixel_ob.channel[j];

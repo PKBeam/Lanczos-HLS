@@ -78,7 +78,8 @@ num_t is allowed to overflow, since the range can be mapped onto a 9 bit signed 
 
 typedef ap_uint<8> byte_el_t;
 typedef ap_fixed<INTEGER_BITS+BIT_PRECISION, INTEGER_BITS> num_el_t;
-typedef ap_fixed<INTEGER_BITS+BIT_PRECISION, INTEGER_BITS> kernel_t;
+typedef ap_fixed<8+BIT_PRECISION, 8> kernel_t;
+typedef ap_ufixed<BIT_PRECISION, 0> fractional_t;
 
 //typedef ap_uint<8*NUM_CHANNELS> byte_t;
 //typedef ap_uint<(INTEGER_BITS+BIT_PRECISION)*NUM_CHANNELS> num_t;
@@ -86,66 +87,13 @@ typedef ap_fixed<INTEGER_BITS+BIT_PRECISION, INTEGER_BITS> kernel_t;
 
 //override [] operator to give back struct access
 
-//typedef ap_uint<8*NUM_CHANNELS> byte_t;
-//typedef ap_uint<(INTEGER_BITS+BIT_PRECISION)*NUM_CHANNELS> num_t;
+typedef ap_uint<8*NUM_CHANNELS> byte_t;
+typedef ap_uint<(INTEGER_BITS+BIT_PRECISION)*NUM_CHANNELS> num_t;
 
-//struct byte_t_wr : byte_t {
-//	typedef ap_uint<8*NUM_CHANNELS> Base;
-//
-//	byte_t_wr(byte_t x) {
-//		*this = x;
-//	}
-//
-//	void write(int i, ap_uint<8> val){
-//		(*this)(i*8, i*8+7) = val(7, 0);
-//	}
-//	ap_uint<8> read(int i, ap_uint<8> &val){
-//		return val(7, 0) = (*this)(i*8, i*8+7);
-//	}
-//
-//	ap_uint<8> operator [](int i){
-//		ap_uint<8> tmp;
-//		tmp(7,0) = (*this)(i*8, i*8+7);
-//		return tmp;
-//	}
-//};
-
-struct byte_t{
-	byte_el_t ch[NUM_CHANNELS];
-};
-
-struct num_t{
-	num_el_t ch[NUM_CHANNELS];
-};
-
-
-
-
-//struct num_t_wr {
-//
-//
-//
-//	num_t_wr(num_t x) {
-//		*this = x;
-//	}
-//
-////	num_t_wr(int x) : Base(x){}
-////	num_t_wr() : Base(){}
-//
-//	void write(int i, num_el_t val){
-//		(*this)((INTEGER_BITS+BIT_PRECISION)*i, (INTEGER_BITS+BIT_PRECISION)*(i+1)-1) = val(val.length()-1, 0);
-//	}
-//
-//	num_el_t read(int i, num_el_t &val){
-//		return val(val.length()-1, 0) = (*this)((INTEGER_BITS+BIT_PRECISION)*i, (INTEGER_BITS+BIT_PRECISION)*(i+1)-1);
-//	}
-//
-//	num_el_t operator [](int i){
-//		num_el_t tmp;
-//		tmp(tmp.length()-1, 0) = (*this)((INTEGER_BITS+BIT_PRECISION)*i, (INTEGER_BITS+BIT_PRECISION)*(i+1)-1);
-//		return tmp;
-//	}
-//};
+void unpack_blob(num_t blob, num_el_t out[NUM_CHANNELS]);
+void unpack_blob(byte_t blob, byte_el_t out[NUM_CHANNELS]);
+num_t pack_blob(num_el_t in[NUM_CHANNELS]);
+byte_t pack_blob(byte_el_t in[NUM_CHANNELS]);
 
 typedef ap_uint<OUT_WIDTH_BITS> row_major_counter_t;
 typedef ap_uint<OUT_HEIGHT_BITS> col_major_counter_t;
