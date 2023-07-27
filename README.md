@@ -7,4 +7,4 @@ This module takes an input image and applies a Lanczos upscaling algorithm on it
 
 Includes both software and HLS implementations.
 
-(has some crazy memory optimisations since the target FPGA board has little memory)
+(has some crazy memory optimisations since the target FPGA board is the Zynq 7000 with <4MB of memory)
